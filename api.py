@@ -185,7 +185,7 @@ Always populate kpis, executive_summary, alerts, and forecast — infer or estim
     try:
         response = client.messages.create(
             model="claude-opus-4-5",
-            max_tokens=2500,
+            max_tokens=8000,
             system=system_prompt,
             messages=[{"role": "user", "content": message_content}],
         )
