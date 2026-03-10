@@ -83,15 +83,21 @@ async def analyze_sales(
     currency     = sanitize(currency, 10) or "EUR"
 
     # Build data block depending on input mode
+    pdf_content = None  # will hold raw bytes if PDF
+
     if input_mode == "file" and file:
         content = await file.read()
         if len(content) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File too large (max 5MB)")
         ext = os.path.splitext(file.filename or "")[-1].lower()
-        if ext not in (".csv", ".txt", ".xlsx", ".xls"):
-            raise HTTPException(status_code=400, detail="Only CSV, TXT or Excel files allowed")
+        if ext not in (".csv", ".txt", ".xlsx", ".xls", ".pdf"):
+            raise HTTPException(status_code=400, detail="Only CSV, TXT, Excel or PDF files allowed")
 
-        if ext in (".xlsx", ".xls"):
+        if ext == ".pdf":
+            # Pass PDF directly to Claude as a document — handles tables natively
+            pdf_content = content
+            data_block = ""  # not used for PDF path
+        elif ext in (".xlsx", ".xls"):
             try:
                 import openpyxl
                 wb = openpyxl.load_workbook(io.BytesIO(content), data_only=True)
@@ -159,14 +165,29 @@ If certain data (e.g. top_clients) is not provided, return an empty array [] for
 Always populate kpis, executive_summary, alerts, and forecast — infer or estimate where needed, flagging assumptions.
 """
 
-    user_msg = f"Here is the sales data to analyse:\n\n{data_block}"
+    # Build message content — PDF gets sent as base64 document, everything else as text
+    if pdf_content:
+        encoded = base64.standard_b64encode(pdf_content).decode("utf-8")
+        message_content = [
+            {
+                "type": "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": "application/pdf",
+                    "data": encoded,
+                },
+            },
+            {"type": "text", "text": "Here is the sales data to analyse. Extract all relevant data from this document and produce the report."}
+        ]
+    else:
+        message_content = f"Here is the sales data to analyse:\n\n{data_block}"
 
     try:
         response = client.messages.create(
             model="claude-opus-4-5",
             max_tokens=2500,
             system=system_prompt,
-            messages=[{"role": "user", "content": user_msg}],
+            messages=[{"role": "user", "content": message_content}],
         )
     except Exception:
         raise HTTPException(status_code=500, detail="Analysis service unavailable")
