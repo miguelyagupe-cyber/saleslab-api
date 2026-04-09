@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: 'Georgia', serif; }
+  #wrap { position: relative; }
+  canvas { display: block; border: 1px solid #333; }
+  #controls { display: flex; gap: 12px; margin-top: 16px; align-items: center; }
+  button { background: #D4AF37; color: #000; border: none; padding: 10px 28px; font-family: 'Georgia', serif; font-size: 13px; font-weight: bold; cursor: pointer; letter-spacing: 2px; transition: opacity 0.2s; }
+  button:hover { opacity: 0.85; }
+  #timeline { width: 640px; height: 4px; background: #333; margin-top: 10px; position: relative; }
+  #progress { height: 100%; background: #D4AF37; width: 0%; transition: none; }
+  #label { color: #666; font-size: 11px; letter-spacing: 1px; margin-top: 8px; text-transform: uppercase; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="640" height="360"></canvas>
+</div>
+<div id="controls">
+  <button id="playBtn">▶ PLAY</button>
+  <button id="restartBtn">↺ RESTART</button>
+</div>
+<div id="timeline"><div id="progress"></div></div>
+<div id="label" id="sceneLabel">Scene: Intro</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 640, H = 360;
+const GOLD = '#D4AF37';
+const BLACK = '#0A0A0A';
+const WHITE = '#F8F8F2';
+
+// Scenes (seconds)
+const S = {
+  OFFICE:   { s: 0,    e: 6 },
+  CHAOS:    { s: 6,    e: 14 },
+  DROWN:    { s: 14,   e: 18 },
+  FALL:     { s: 18,   e: 23 },
+  SCREEN:   { s: 23,   e: 26.5 },
+  SALESLAB: { s: 26.5, e: 30 },
+  SAVEME:   { s: 30,   e: 35 },
+  BLACKOUT: { s: 35,   e: 37 }
+};
+
+let startTime = null, raf = null;
+
+function lerp(a,b,t){ return a+(b-a)*t; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+function easeIn(t){ return t*t*t; }
+function easeIO(t){ return t<0.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2; }
+function sp(t, scene){ return clamp((t-scene.s)/(scene.e-scene.s),0,1); }
+
+// Rounded rect polyfill
+function rr(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ─────────── STICK FIGURE ───────────
+function fig(x, y, sc=1, opts={}) {
+  const { arms=0, legs=0.3, tilt=0, col=BLACK, lw=2.5, tumble=0, panic=0, fall=false, t=0 } = opts;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(tumble);
+  ctx.strokeStyle=col; ctx.fillStyle=col;
+  ctx.lineWidth=lw*sc; ctx.lineCap='round'; ctx.lineJoin='round';
+
+  // Head
+  ctx.save(); ctx.rotate(tilt);
+  ctx.beginPath(); ctx.arc(0,-50*sc,11*sc,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // Body
+  ctx.beginPath(); ctx.moveTo(0,-39*sc); ctx.lineTo(0,-6*sc); ctx.stroke();
+
+  // Arms
+  if(fall){
+    ctx.beginPath(); ctx.moveTo(0,-28*sc); ctx.lineTo(-28*sc,(-28+22*Math.sin(1.4))*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-28*sc); ctx.lineTo(28*sc,(-28+22*Math.sin(1.4))*sc); ctx.stroke();
+  } else {
+    const la = arms;
+    ctx.beginPath(); ctx.moveTo(0,-28*sc); ctx.lineTo(-26*sc*Math.cos(la),(-28+22*Math.sin(la))*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-28*sc); ctx.lineTo(26*sc*Math.cos(la),(-28+22*Math.sin(la))*sc); ctx.stroke();
+  }
+
+  // Legs
+  const lp = legs;
+  if(fall){
+    ctx.beginPath(); ctx.moveTo(0,-6*sc); ctx.lineTo(-22*sc,30*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-6*sc); ctx.lineTo(22*sc,20*sc); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0,-6*sc); ctx.lineTo(-20*sc,(22+lp*35)*sc); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-6*sc); ctx.lineTo(20*sc,(22+lp*35)*sc); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─────────── SPREADSHEET ───────────
+function sheet(x,y,w,h,rot,alpha){
+  ctx.save();
+  ctx.translate(x,y); ctx.rotate(rot); ctx.globalAlpha=clamp(alpha,0,1);
+  ctx.fillStyle='#FEFEFE'; ctx.strokeStyle='#CCC'; ctx.lineWidth=1;
+  ctx.fillRect(-w/2,-h/2,w,h); ctx.strokeRect(-w/2,-h/2,w,h);
+  // Grid
+  ctx.strokeStyle='#DDD'; ctx.lineWidth=0.5;
+  [1,2,3].forEach(i=>{ ctx.beginPath(); ctx.moveTo(-w/2+i*w/4,-h/2); ctx.lineTo(-w/2+i*w/4,h/2); ctx.stroke(); });
+  [1,2,3,4].forEach(i=>{ ctx.beginPath(); ctx.moveTo(-w/2,-h/2+i*h/5); ctx.lineTo(w/2,-h/2+i*h/5); ctx.stroke(); });
+  ctx.fillStyle='#E8E8E8'; ctx.fillRect(-w/2,-h/2,w,h/5);
+  ctx.restore();
+}
+
+// ─────────── SPEED LINES ───────────
+function speedLines(cx,cy,n,r1,r2,col,alpha,lw=1){
+  ctx.save(); ctx.globalAlpha=alpha; ctx.strokeStyle=col; ctx.lineWidth=lw;
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2;
+    const ir=r1+Math.random()*15;
+    const or=r2-Math.random()*30;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*ir,cy+Math.sin(a)*ir);
+    ctx.lineTo(cx+Math.cos(a)*or,cy+Math.sin(a)*or);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// JJK impact burst
+function impact(cx,cy,r,col,alpha){
+  ctx.save(); ctx.globalAlpha=alpha;
+  const n=80;
+  for(let i=0;i<n;i++){
+    const a=(i/n)*Math.PI*2;
+    const w=(i%4===0)?9:(i%2===0)?4:1.5;
+    ctx.fillStyle=col;
+    ctx.save(); ctx.translate(cx,cy); ctx.rotate(a);
+    ctx.beginPath();
+    ctx.moveTo(2,-w/2); ctx.lineTo(r,-w/3); ctx.lineTo(r,w/3); ctx.lineTo(2,w/2);
+    ctx.fill(); ctx.restore();
+  }
+  ctx.restore();
+}
+
+// Flying sheets pool
+let sheets=[];
+function initSheets(){
+  sheets=[];
+  for(let i=0;i<30;i++) sheets.push({
+    x:Math.random()*W, y:-40-Math.random()*H,
+    vx:(Math.random()-.5)*2, vy:1.5+Math.random()*2.5,
+    rot:Math.random()*Math.PI*2, vrot:(Math.random()-.5)*.08,
+    w:35+Math.random()*45, h:28+Math.random()*35
+  });
+}
+let lastT=0;
+function updateSheets(t){
+  sheets.forEach(s=>{
+    s.x+=s.vx; s.y+=s.vy*2; s.rot+=s.vrot;
+    if(s.y>H+60){ s.y=-60; s.x=Math.random()*W; }
+  });
+}
+
+// ══════════ SCENES ══════════
+
+function sceneOffice(t){
+  const p=sp(t,S.OFFICE);
+  // Floor
+  ctx.fillStyle='#EAEAE4'; ctx.fillRect(0,0,W,H);
+  // Subtle lines
+  ctx.strokeStyle='rgba(0,0,0,0.05)'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=50){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  // Desk
+  ctx.fillStyle='#8B6F47';
+  ctx.fillRect(W/2-130,H/2+32,260,18);
+  ctx.fillStyle='#6B4F2F';
+  ctx.fillRect(W/2-120,H/2+50,13,70); ctx.fillRect(W/2+107,H/2+50,13,70);
+  // Monitor
+  ctx.fillStyle='#222'; ctx.fillRect(W/2-55,H/2-65,110,72);
+  ctx.fillStyle='#1a1a1a'; ctx.fillRect(W/2-4,H/2+7,8,22);
+  ctx.fillStyle='#3a6ea8'; ctx.fillRect(W/2-47,H/2-58,94,58);
+  // Spreadsheet on screen
+  ctx.save(); ctx.fillStyle='#4a8acc';
+  for(let r=0;r<5;r++) for(let c=0;c<5;c++){
+    ctx.fillStyle=`rgba(255,255,255,${0.15+Math.random()*0.1})`;
+    ctx.fillRect(W/2-44+c*18,H/2-55+r*10,16,8);
+  }
+  ctx.restore();
+  // Paper stack
+  for(let i=4;i>=0;i--){
+    ctx.fillStyle=i%2===0?WHITE:'#EEE';
+    ctx.strokeStyle='#CCC'; ctx.lineWidth=.5;
+    ctx.fillRect(W/2+55+i*1.5,H/2+8+i*1.5,58,22);
+    ctx.strokeRect(W/2+55+i*1.5,H/2+8+i*1.5,58,22);
+  }
+  // Mug
+  ctx.fillStyle='#444';
+  rr(W/2-95,H/2+8,20,24,3); ctx.fill();
+  ctx.strokeStyle='#444'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(W/2-75,H/2+20,7,-0.5,.5); ctx.stroke();
+  // Figure typing
+  const bob=Math.sin(t*2)*2;
+  const armA=-0.25+Math.sin(t*5)*.12;
+  fig(W/2-8,H/2+30+bob,.88,{arms:armA, tilt:Math.sin(t*.4)*.04});
+  // ZZZ
+  if(p<.75){
+    ctx.font='13px Georgia'; ctx.fillStyle=`rgba(130,130,120,${.35+Math.sin(t*1.5)*.15})`;
+    ctx.fillText('zzz',W/2+28,H/2-78+Math.sin(t)*5);
+  }
+}
+
+function sceneChaos(t){
+  const p=sp(t,S.CHAOS);
+  const eP=easeIn(p);
+  ctx.save();
+  ctx.translate(Math.sin(t*28)*eP*5, Math.cos(t*22)*eP*3);
+  // BG
+  const bg=lerp(234,252,eP);
+  ctx.fillStyle=`rgb(${bg},${bg-4},${bg-8})`; ctx.fillRect(-10,-10,W+20,H+20);
+  // Impact rays behind
+  if(p>.25) impact(W/2,H/2,Math.max(W,H)*1.1,`rgba(0,0,0,.12)`,eP*.9);
+  // Speed lines
+  if(p>.35) speedLines(W/2,H/2,50,55,310,'#000',eP*.2,1.2);
+  // Desk (shaking)
+  ctx.save(); ctx.translate(Math.sin(t*18)*eP*4,0);
+  ctx.fillStyle='#8B6F47'; ctx.fillRect(W/2-130,H/2+32,260,18);
+  ctx.restore();
+  // Monitor red
+  ctx.fillStyle='#222'; ctx.fillRect(W/2-55,H/2-65,110,72);
+  const sr=lerp(74,240,eP),sg=lerp(144,50,eP),sb=lerp(200,50,eP);
+  ctx.fillStyle=`rgb(${sr|0},${sg|0},${sb|0})`; ctx.fillRect(W/2-47,H/2-58,94,58);
+  // ERROR on screen
+  if(p>.4){
+    ctx.fillStyle=`rgba(255,255,255,${eP*.9})`;
+    ctx.font=`bold ${8+eP*6}px monospace`;
+    ctx.textAlign='center';
+    ctx.fillText('#REF! #NULL ERR',W/2,H/2-30);
+    ctx.textAlign='left';
+  }
+  // Flying sheets
+  updateSheets(t);
+  sheets.forEach(s=>sheet(s.x,s.y,s.w*(0.2+eP*.8),s.h*(0.2+eP*.8),s.rot,Math.min(1,eP*2.5)));
+  // Panic figure
+  const pArm=lerp(-.25,1.3,eP);
+  const pBob=Math.sin(t*7)*eP*5;
+  const running=p>.5;
+  if(running){
+    const rl=Math.sin(t*8)*.45;
+    const ra=Math.sin(t*8+Math.PI)*.55;
+    ctx.save();
+    ctx.strokeStyle=BLACK; ctx.fillStyle=BLACK;
+    ctx.lineWidth=2.5; ctx.lineCap='round';
+    // Running legs
+    ctx.translate(W/2+pBob*.5,H/2+30+pBob);
+    ctx.beginPath(); ctx.arc(0,-50*.88,11*.88,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,-39*.88); ctx.lineTo(0,-6*.88); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-28*.88); ctx.lineTo(-26*.88*Math.cos(ra),(-28+22*Math.sin(1.3))*.88); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-28*.88); ctx.lineTo(26*.88*Math.cos(ra),(-28+22*Math.sin(1.3))*.88); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-6*.88); ctx.lineTo(-20*.88*Math.cos(rl+.4),(22+rl*35)*.88); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,-6*.88); ctx.lineTo(20*.88*Math.cos(rl+.4),(22-rl*35)*.88); ctx.stroke();
+    ctx.restore();
+  } else {
+    fig(W/2-8,H/2+30+pBob,.88,{arms:pArm,tilt:Math.sin(t*3)*eP*.18});
+  }
+  // !! marks
+  if(p>.45){
+    ctx.font=`bold ${16+eP*12}px sans-serif`;
+    ctx.fillStyle=`rgba(220,30,30,${eP})`;
+    ctx.fillText('!!',W/2+18,H/2-82);
+  }
+  // JJK flash on peaks
+  if(p>.65 && Math.sin(t*14)>.72){
+    ctx.fillStyle=`rgba(255,255,255,.45)`; ctx.fillRect(-10,-10,W+20,H+20);
+  }
+  ctx.restore();
+}
+
+function sceneDrown(t){
+  const p=sp(t,S.DROWN);
+  const eP=easeIn(p);
+  // White flash entry
+  if(p<.08){ ctx.fillStyle=`rgba(255,255,255,${1-p/.08})`; ctx.fillRect(0,0,W,H); return; }
+  ctx.fillStyle='#F0F0E8'; ctx.fillRect(0,0,W,H);
+  // Impact from above
+  impact(W/2,-80,H+160,'rgba(0,0,0,.18)',1);
+  // Stack of piling sheets
+  const pile=eP*H*.75;
+  for(let i=0;i<24;i++){
+    const iy=H-30-(i/24)*pile;
+    if(iy>H) continue;
+    sheet(W/2+Math.sin(i*1.9)*28*(1-eP*.6),iy,78+Math.sin(i)*18,52+Math.cos(i)*14,Math.sin(i*2.3)*.35,Math.min(1,(H-iy)/80));
+  }
+  // Sinking figure
+  const sinkY=lerp(H/2+30,H+30,eP);
+  if(sinkY<H+5) fig(W/2,sinkY,.88,{arms:lerp(-.2,1.4,eP),tilt:lerp(0,.25,eP)});
+  // Desperate hand above pile
+  if(p>.55 && sinkY<H){
+    ctx.save();
+    ctx.strokeStyle=BLACK; ctx.lineWidth=2.5; ctx.lineCap='round';
+    const hy=sinkY-40;
+    ctx.beginPath(); ctx.moveTo(W/2,hy); ctx.lineTo(W/2+16,hy-28); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2+16,hy-28); ctx.lineTo(W/2+24,hy-22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W/2+16,hy-28); ctx.lineTo(W/2+22,hy-38); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function sceneFall(t){
+  const p=sp(t,S.FALL);
+  const eP=easeIO(p);
+  ctx.fillStyle=BLACK; ctx.fillRect(0,0,W,H);
+  // Radial speed lines (falling sensation)
+  for(let i=0;i<90;i++){
+    const a=(i/90)*Math.PI*2;
+    const lw=(i%5===0)?3:(i%3===0)?1.5:.8;
+    const ir=15+eP*55; const or=100+eP*260;
+    ctx.strokeStyle=`rgba(255,255,255,${.25+eP*.35})`;
+    ctx.lineWidth=lw;
+    ctx.beginPath();
+    ctx.moveTo(W/2+Math.cos(a)*ir,H/2+Math.sin(a)*ir);
+    ctx.lineTo(W/2+Math.cos(a)*or,H/2+Math.sin(a)*or);
+    ctx.stroke();
+  }
+  // Tumbling figure
+  const fx=W/2+Math.sin(t*1.8)*25*(1-eP*.6);
+  const fy=lerp(H*.12,H*.52,eP);
+  ctx.save(); ctx.translate(fx,fy); ctx.rotate(t*2.8);
+  fig(0,0,1,{arms:1.2,legs:.6,tilt:Math.sin(t*2)*.4,col:WHITE,fall:true});
+  ctx.restore();
+  // Floating data fragments
+  for(let i=0;i<10;i++){
+    const fx2=W/2+Math.sin(i*2.3+t*.4)*(W*.42);
+    const fy2=H*.08+((t*25+i*H/10)%H);
+    ctx.fillStyle=`rgba(212,175,55,${.3+Math.sin(i)*.15})`;
+    ctx.font='9px monospace';
+    ctx.fillText(['#REF!','#NULL','0.00','N/A','###','ERR','NaN','%','???','DIV/0'][i],fx2-14,fy2);
+  }
+  // Gold glow from below
+  if(p>.55){
+    const gp=(p-.55)/.45;
+    const gr=ctx.createRadialGradient(W/2,H,0,W/2,H,lerp(0,200,gp));
+    gr.addColorStop(0,`rgba(212,175,55,${gp*.85})`);
+    gr.addColorStop(.4,`rgba(212,175,55,${gp*.3})`);
+    gr.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+  }
+}
+
+function sceneScreen(t){
+  const p=sp(t,S.SCREEN);
+  const eP=easeOut(p);
+  ctx.fillStyle=BLACK; ctx.fillRect(0,0,W,H);
+  // Expanding gold screen
+  const sw=lerp(90,W*1.6,eP);
+  const sh=lerp(55,H*1.6,eP);
+  const sx=W/2; const sy=lerp(H*.82,H/2,eP);
+  // Glow halo
+  const g=ctx.createRadialGradient(sx,sy,0,sx,sy,sw*.7);
+  g.addColorStop(0,`rgba(212,175,55,${.9-eP*.2})`);
+  g.addColorStop(.4,`rgba(212,175,55,${.3-eP*.1})`);
+  g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  // Screen rect
+  if(p<.72){
+    ctx.fillStyle=GOLD;
+    ctx.save(); ctx.translate(sx-sw/2,sy-sh/2);
+    ctx.fillRect(0,0,sw,sh); ctx.restore();
+    if(p>.18){
+      ctx.fillStyle=BLACK;
+      ctx.font=`bold ${lerp(9,22,eP)}px Georgia`;
+      ctx.textAlign='center';
+      ctx.fillText('SALES LAB',sx,sy+6);
+      ctx.textAlign='left';
+    }
+  }
+  // Diving figure
+  if(p<.88){
+    const dy=lerp(H*.22,sy,eP);
+    const ds=lerp(1,.25,eP);
+    ctx.save(); ctx.translate(W/2,dy); ctx.rotate(Math.PI/2);
+    fig(0,0,ds,{arms:-.4,legs:-.05,col:WHITE});
+    ctx.restore();
+  }
+  // White flash entry
+  if(p>.78){
+    ctx.fillStyle=`rgba(255,255,255,${(p-.78)/.22})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+function sceneSalesLab(t){
+  const p=sp(t,S.SALESLAB);
+  const eP=easeOut(p);
+  ctx.fillStyle='#FAFAF7'; ctx.fillRect(0,0,W,H);
+  // Subtle dot grid
+  ctx.fillStyle='rgba(0,0,0,.05)';
+  for(let x=15;x<W;x+=25) for(let y=55;y<H;y+=25){ ctx.beginPath(); ctx.arc(x,y,1,0,Math.PI*2); ctx.fill(); }
+  // Top bar
+  ctx.fillStyle=BLACK; ctx.fillRect(0,0,W,44);
+  ctx.fillStyle=GOLD; ctx.font='bold 15px Georgia'; ctx.fillText('SALES LAB',18,28);
+  ['Sales','Financial','Costs','Efficiency'].forEach((n,i)=>{
+    ctx.fillStyle='rgba(255,255,255,.55)';
+    ctx.font='11px sans-serif';
+    ctx.fillText(n,175+i*78,28);
+  });
+  // AI badge
+  ctx.fillStyle=GOLD;
+  rr(W-92,11,72,22,11); ctx.fill();
+  ctx.fillStyle=BLACK; ctx.font='bold 9px sans-serif'; ctx.fillText('AI POWERED',W-88,26);
+  // Cards
+  const cards=[['Sales','▲ 12.4%'],['Financial','▲ 8.1%'],['Costs','▼ 3.2%'],['Efficiency','▲ 18.7%']];
+  const cw=(W-50)/4-8; const cy2=60;
+  cards.forEach(([label,val],i)=>{
+    const carp=clamp((eP-i*.18)/.5,0,1);
+    if(carp<=0) return;
+    const cx2=20+i*(cw+8);
+    ctx.save(); ctx.globalAlpha=carp; ctx.translate(0,lerp(18,0,carp));
+    ctx.fillStyle=WHITE; ctx.shadowColor='rgba(0,0,0,.1)'; ctx.shadowBlur=12;
+    rr(cx2,cy2,cw,105,8); ctx.fill(); ctx.shadowBlur=0;
+    // Gold top accent
+    ctx.fillStyle=GOLD; ctx.fillRect(cx2,cy2,cw,3);
+    ctx.fillStyle=BLACK; ctx.font='bold 10px sans-serif'; ctx.fillText(label,cx2+10,cy2+22);
+    ctx.fillStyle=GOLD; ctx.font='bold 13px sans-serif'; ctx.fillText(val,cx2+10,cy2+42);
+    // Mini bars
+    [.5,.8,.6,.95,.7].forEach((h2,b)=>{
+      ctx.fillStyle=b===3?GOLD:'rgba(212,175,55,.4)';
+      const bh=h2*38; const bx=cx2+10+b*((cw-20)/5);
+      ctx.fillRect(bx,cy2+105-15-bh,(cw-20)/5-2,bh);
+    });
+    ctx.restore();
+  });
+  // Screen recording placeholder
+  const boxP=clamp((p-.55)/.45,0,1);
+  if(boxP>0){
+    ctx.save(); ctx.globalAlpha=boxP;
+    ctx.fillStyle='rgba(212,175,55,.07)';
+    rr(W/2-170,H-115,340,90,8); ctx.fill();
+    ctx.strokeStyle=GOLD; ctx.lineWidth=1.5;
+    ctx.setLineDash([6,5]);
+    rr(W/2-170,H-115,340,90,8); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle=GOLD; ctx.font='11px monospace'; ctx.textAlign='center';
+    ctx.fillText('[ YOUR SCREEN RECORDING HERE ]',W/2,H-65);
+    ctx.font='9px monospace'; ctx.fillStyle='rgba(212,175,55,.6)';
+    ctx.fillText('composite in capcut on top of this frame',W/2,H-50);
+    ctx.textAlign='left';
+    ctx.restore();
+  }
+}
+
+function sceneSaveMe(t){
+  const p=sp(t,S.SAVEME);
+  const eP=easeOut(p);
+  ctx.fillStyle='#FAFAF7'; ctx.fillRect(0,0,W,H);
+  // Top bar
+  ctx.fillStyle=BLACK; ctx.fillRect(0,0,W,44);
+  ctx.fillStyle=GOLD; ctx.font='bold 15px Georgia'; ctx.fillText('SALES LAB',18,28);
+  // Chat panel
+  const px=W*.28, pw=W*.67;
+  ctx.fillStyle=WHITE; ctx.shadowColor='rgba(0,0,0,.1)'; ctx.shadowBlur=20;
+  rr(px,55,pw,H-72,10); ctx.fill(); ctx.shadowBlur=0;
+  // Chat header
+  ctx.fillStyle=BLACK;
+  rr(px,55,pw,42,10); ctx.fill();
+  ctx.fillStyle=GOLD; ctx.font='bold 12px sans-serif'; ctx.fillText('AI Assistant',px+14,81);
+  ctx.beginPath(); ctx.arc(px+pw-18,76,5,0,Math.PI*2);
+  ctx.fillStyle=GOLD; ctx.fill();
+  // Typing dots pulse indicator
+  ctx.fillStyle='rgba(255,255,255,.3)'; ctx.font='9px monospace';
+  ctx.fillText('● online',px+pw-75,81);
+  // User message
+  if(p>.18){
+    const mp=clamp((p-.18)/.35,0,1);
+    const mw=lerp(18,130,mp);
+    ctx.save(); ctx.globalAlpha=mp;
+    ctx.fillStyle=BLACK;
+    rr(px+pw-mw-18,108,mw,34,10); ctx.fill();
+    if(mp>.45){
+      const txt='save me';
+      const vis=txt.slice(0,Math.floor(txt.length*(mp-.45)/.55));
+      ctx.fillStyle=WHITE; ctx.font='13px Georgia';
+      ctx.fillText(vis,px+pw-mw-8,130);
+    }
+    ctx.restore();
+  }
+  // Three dots response
+  if(p>.72){
+    const dp=clamp((p-.72)/.28,0,1);
+    ctx.save(); ctx.globalAlpha=dp;
+    ctx.fillStyle='#EFEFEF';
+    rr(px+14,158,68,34,10); ctx.fill();
+    for(let d=0;d<3;d++){
+      const pulse=Math.sin(t*5+d*1.1)*.5+.5;
+      ctx.fillStyle=`rgba(0,0,0,${.3+pulse*.5})`;
+      ctx.beginPath(); ctx.arc(px+32+d*14,175,4,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // Fade to black
+  if(p>.82){
+    ctx.fillStyle=`rgba(0,0,0,${(p-.82)/.18})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+// ══════════ MAIN LOOP ══════════
+const sceneNames = ['Boring Office','Chaos Begins','Drowning in Data','The Fall','The Screen','Sales Lab','Save Me','Cut to Black'];
+
+function render(ts){
+  if(!startTime) startTime=ts;
+  const t=(ts-startTime)/1000;
+  updateSheets(t);
+  if(t<S.CHAOS.s) sceneOffice(t);
+  else if(t<S.DROWN.s) sceneChaos(t);
+  else if(t<S.FALL.s) sceneDrown(t);
+  else if(t<S.SCREEN.s) sceneFall(t);
+  else if(t<S.SALESLAB.s) sceneScreen(t);
+  else if(t<S.SAVEME.s) sceneSalesLab(t);
+  else if(t<S.BLACKOUT.s) sceneSaveMe(t);
+  else { ctx.fillStyle=BLACK; ctx.fillRect(0,0,W,H); }
+  // HUD
+  document.getElementById('progress').style.width=(clamp(t/37,0,1)*100)+'%';
+  if(t<37) raf=requestAnimationFrame(render);
+  else document.getElementById('playBtn').textContent='▶ PLAY';
+}
+
+// Init
+ctx.fillStyle='#1A1A1A'; ctx.fillRect(0,0,W,H);
+ctx.fillStyle=GOLD; ctx.font='bold 18px Georgia'; ctx.textAlign='center';
+ctx.fillText('SALES LAB — Origin Story',W/2,H/2-10);
+ctx.fillStyle='rgba(255,255,255,.4)'; ctx.font='12px sans-serif';
+ctx.fillText('Press PLAY to begin (~37 seconds)',W/2,H/2+18);
+ctx.textAlign='left';
+initSheets();
+
+document.getElementById('playBtn').onclick=function(){
+  if(raf) cancelAnimationFrame(raf);
+  startTime=null; initSheets(); lastT=0;
+  raf=requestAnimationFrame(render);
+  this.textContent='⏸ PLAYING';
+};
+document.getElementById('restartBtn').onclick=function(){
+  if(raf) cancelAnimationFrame(raf);
+  startTime=null; initSheets(); lastT=0;
+  raf=requestAnimationFrame(render);
+  document.getElementById('playBtn').textContent='⏸ PLAYING';
+};
+</script>
+</body>
+</html>

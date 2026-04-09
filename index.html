@@ -3,306 +3,441 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SalesLab — Inteligência de Negócio com IA</title>
+  <title>SalesLab — Análise Financeira com IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script>
+    // FingerprintJS open source — loaded inline to avoid CDN delays
+    !function(e,t){"object"==typeof exports&&"object"==typeof module?module.exports=t():"function"==typeof define&&define.amd?define([],t):"object"==typeof exports?exports.FingerprintJS=t():e.FingerprintJS=t()}(globalThis,(()=>(()=>{"use strict";var e={};return e})()));
+  </script>
+
   <style>
     :root {
-      --bg:#0c0c0c;--s1:#141414;--s2:#1a1a1a;--s3:#202020;
-      --gold:#c9a84c;--gold-d:#8a6e2f;--gold-g:rgba(201,168,76,0.10);
-      --white:#f0ede8;--muted:#555;--muted2:#888;
-      --crit:#c0392b;--warn:#e67e22;--pos:#27ae60;--r:8px;
+      --bg:     #0c0c0c;
+      --s1:     #141414;
+      --s2:     #1a1a1a;
+      --s3:     #202020;
+      --gold:   #c9a84c;
+      --gold-d: #8a6e2f;
+      --gold-g: rgba(201,168,76,0.10);
+      --white:  #f0ede8;
+      --muted:  #555;
+      --muted2: #888;
+      --crit:   #c0392b;
+      --warn:   #e67e22;
+      --pos:    #27ae60;
+      --r:      8px;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    body{background:var(--bg);color:var(--white);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;padding-bottom:100px}
+    body{background:var(--bg);color:var(--white);font-family:'DM Sans',sans-serif;font-weight:300;min-height:100vh;padding-bottom:80px}
 
-    /* LOGIN — não alterado */
-    #loginOverlay{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;flex-direction:column;}
-    #loginOverlay.hidden{display:none}
-    .login-box{width:100%;max-width:380px;padding:0 24px;display:flex;flex-direction:column;align-items:center;gap:28px;}
-    .login-logo{display:flex;align-items:center;gap:13px}
-    .login-logo svg{width:40px;height:40px}
-    .login-logo-text{font-family:'Cormorant Garamond',serif;font-size:1.8rem;letter-spacing:.03em}
-    .login-logo-text span{color:var(--gold)}
-    .login-title{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted2);letter-spacing:.18em;text-transform:uppercase;text-align:center;}
-    .login-card{width:100%;background:var(--s1);border:1px solid rgba(201,168,76,.18);border-radius:var(--r);padding:28px;position:relative;overflow:hidden;}
-    .login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);}
-    .login-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--gold-d);letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;display:block;}
-    .login-input{width:100%;background:var(--s2);border:1px solid rgba(201,168,76,.18);border-radius:var(--r);color:var(--white);font-family:'DM Mono',monospace;font-size:.95rem;letter-spacing:.12em;padding:12px 16px;outline:none;transition:border-color .2s;text-align:center;}
-    .login-input:focus{border-color:rgba(201,168,76,.5)}
-    .login-input::placeholder{color:#333}
-    .login-btn{width:100%;margin-top:16px;background:var(--gold);color:#000;border:none;border-radius:var(--r);font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;letter-spacing:.1em;padding:13px;cursor:pointer;transition:opacity .2s,transform .2s;}
-    .login-btn:hover{opacity:.88;transform:translateY(-1px)}
-    .login-err{margin-top:12px;font-family:'DM Mono',monospace;font-size:.7rem;color:#e74c3c;text-align:center;display:none;}
-    .login-err.on{display:block}
-    .login-footer{font-family:'DM Mono',monospace;font-size:.62rem;color:#2a2a2a;letter-spacing:.1em;}
+    /* ── AUTH OVERLAY ──────────────────────────────────────────────────────── */
+    #authOverlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.92);
+      z-index:1000;display:flex;align-items:center;justify-content:center;
+      backdrop-filter:blur(12px);
+    }
+    #authOverlay.hidden{display:none}
+    .auth-card{
+      background:var(--s1);border:1px solid rgba(201,168,76,.2);
+      border-radius:16px;padding:40px;width:100%;max-width:420px;
+      position:relative;overflow:hidden;
+    }
+    .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+    .auth-logo{font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:600;text-align:center;margin-bottom:8px}
+    .auth-logo span{color:var(--gold)}
+    .auth-tagline{font-size:.78rem;color:var(--muted2);text-align:center;margin-bottom:28px;line-height:1.5}
+    .auth-tabs{display:flex;gap:4px;background:var(--s2);border-radius:var(--r);padding:4px;margin-bottom:24px}
+    .auth-tab{flex:1;background:none;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.07em;padding:8px;border-radius:6px;cursor:pointer;transition:all .2s}
+    .auth-tab.active{background:var(--gold);color:#000;font-weight:500}
+    .auth-panel{display:none}.auth-panel.active{display:block}
+    .auth-desc{font-size:.82rem;color:var(--muted2);margin-bottom:16px;line-height:1.6}
+    .auth-input{
+      width:100%;background:var(--s2);border:1px solid rgba(201,168,76,.14);
+      border-radius:var(--r);color:var(--white);font-family:'DM Sans',sans-serif;
+      font-size:.88rem;padding:11px 14px;outline:none;transition:border-color .2s;margin-bottom:12px;
+    }
+    .auth-input:focus{border-color:rgba(201,168,76,.45)}
+    .auth-input::placeholder{color:#3a3a3a}
+    .auth-btn{
+      width:100%;background:var(--gold);color:#000;border:none;border-radius:var(--r);
+      font-family:'DM Mono',monospace;font-size:.78rem;font-weight:500;letter-spacing:.07em;
+      padding:12px;cursor:pointer;transition:all .2s;margin-bottom:12px;
+    }
+    .auth-btn:hover{opacity:.88;transform:translateY(-1px)}
+    .auth-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .auth-err{font-size:.78rem;color:#e74c3c;margin-bottom:8px;display:none}
+    .auth-err.on{display:block}
+    .auth-terms{font-size:.68rem;color:#333;text-align:center;line-height:1.5}
+    .auth-divider{height:1px;background:rgba(255,255,255,.06);margin:20px 0}
+    .plan-features{list-style:none;margin-bottom:20px}
+    .plan-features li{font-size:.78rem;color:var(--muted2);padding:4px 0;display:flex;align-items:center;gap:8px}
+    .plan-features li::before{content:'✓';color:var(--gold);font-family:'DM Mono',monospace;font-size:.7rem;flex-shrink:0}
 
-    /* APP */
+    /* ── HEADER ────────────────────────────────────────────────────────────── */
+    header{
+      border-bottom:1px solid rgba(201,168,76,.18);padding:16px 32px;
+      display:flex;align-items:center;justify-content:space-between;
+      position:sticky;top:0;background:rgba(12,12,12,.96);
+      backdrop-filter:blur(14px);z-index:100;gap:16px;
+    }
+    .logo{display:flex;align-items:center;gap:12px}
+    .logo svg{width:32px;height:32px}
+    .logo-text{font-family:'Cormorant Garamond',serif;font-size:1.45rem;letter-spacing:.03em}
+    .logo-text span{color:var(--gold)}
+    .header-right{display:flex;align-items:center;gap:12px}
+    .plan-badge{
+      font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;
+      padding:4px 10px;border-radius:20px;text-transform:uppercase;font-weight:500;
+    }
+    .plan-badge.free   {background:rgba(255,255,255,.06);color:var(--muted2);border:1px solid rgba(255,255,255,.1)}
+    .plan-badge.starter{background:rgba(201,168,76,.12);color:var(--gold);border:1px solid rgba(201,168,76,.25)}
+    .plan-badge.pro    {background:rgba(201,168,76,.18);color:var(--gold);border:1px solid rgba(201,168,76,.35)}
+    .plan-badge.team   {background:var(--gold);color:#000;border:1px solid var(--gold)}
+    .plan-badge.admin  {background:#4a90e2;color:#fff;border:1px solid #4a90e2}
+    .plan-badge.test   {background:rgba(39,174,96,.2);color:#2ecc71;border:1px solid rgba(39,174,96,.3)}
+    .analyses-counter{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted2);letter-spacing:.05em}
+    .analyses-counter.low{color:var(--warn)}
+    .analyses-counter.zero{color:var(--crit)}
+    .logout-btn{background:none;border:none;color:var(--muted);font-size:.72rem;cursor:pointer;font-family:'DM Mono',monospace;letter-spacing:.05em;padding:4px 8px;border-radius:4px;transition:color .2s}
+    .logout-btn:hover{color:var(--white)}
+
+    /* ── APP (hidden until auth) ───────────────────────────────────────────── */
     #app{display:none}
     #app.visible{display:block}
-    header{border-bottom:1px solid rgba(201,168,76,.18);padding:18px 40px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(12,12,12,.97);backdrop-filter:blur(14px);z-index:100;}
-    .logo{display:flex;align-items:center;gap:13px}
-    .logo svg{width:34px;height:34px}
-    .logo-text{font-family:'Cormorant Garamond',serif;font-size:1.5rem;letter-spacing:.03em}
-    .logo-text span{color:var(--gold)}
-    .header-badge{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:.12em;border:1px solid rgba(201,168,76,.25);padding:4px 11px;border-radius:20px;}
-    .hero{text-align:center;padding:44px 24px 32px;max-width:640px;margin:0 auto}
+
+    /* ── HERO ──────────────────────────────────────────────────────────────── */
+    .hero{text-align:center;padding:48px 24px 36px;max-width:620px;margin:0 auto}
     .hero-tag{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:.18em;text-transform:uppercase;margin-bottom:14px}
     .hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;line-height:1.15;margin-bottom:12px}
     .hero h1 em{font-style:italic;color:var(--gold)}
     .hero p{font-size:.88rem;color:var(--muted2);line-height:1.7}
-    .wrap{max-width:860px;margin:0 auto;padding:0 24px}
 
-    /* SESSION TRACKER */
-    .session-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px}
-    .session-item{background:var(--s1);border:1px solid rgba(201,168,76,.1);border-radius:var(--r);padding:10px 12px;display:flex;align-items:center;gap:8px;cursor:pointer;transition:all .2s;position:relative;}
-    .session-item:hover{border-color:rgba(201,168,76,.3)}
-    .session-item.done{border-color:rgba(201,168,76,.35);background:rgba(201,168,76,.05)}
-    .session-item.done .session-dot{background:var(--gold)}
-    .session-dot{width:7px;height:7px;border-radius:50%;background:var(--s3);flex-shrink:0;transition:background .3s}
-    .session-label{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted2);letter-spacing:.07em;text-transform:uppercase}
-    .session-item.done .session-label{color:var(--gold)}
-    .session-view{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--gold-d);margin-left:auto;display:none}
-    .session-item.done .session-view{display:block}
+    /* ── WRAP ──────────────────────────────────────────────────────────────── */
+    .wrap{max-width:820px;margin:0 auto;padding:0 24px}
 
-    /* REPORT TYPE SELECTOR */
-    .report-type-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-    .rtype-btn{background:var(--s1);border:1px solid rgba(201,168,76,.12);border-radius:var(--r);padding:14px 10px;cursor:pointer;text-align:center;transition:all .2s;position:relative;overflow:hidden;}
-    .rtype-btn::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:transparent;transition:background .2s;}
-    .rtype-btn:hover{border-color:rgba(201,168,76,.35);background:var(--s2)}
-    .rtype-btn.active{border-color:var(--gold);background:rgba(201,168,76,.07)}
-    .rtype-btn.active::before{background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-    .rtype-btn.has-report{border-color:rgba(201,168,76,.3)}
-    .rtype-icon{font-size:1.2rem;margin-bottom:5px}
-    .rtype-label{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--muted2);letter-spacing:.08em;text-transform:uppercase;display:block}
-    .rtype-btn.active .rtype-label{color:var(--gold)}
-    .rtype-desc{font-size:.7rem;color:var(--muted);margin-top:3px;line-height:1.3}
-    .rtype-check{position:absolute;top:6px;right:8px;font-size:.6rem;color:var(--gold);opacity:0;transition:opacity .2s}
-    .rtype-btn.has-report .rtype-check{opacity:1}
+    /* ── MODULE SELECTOR ───────────────────────────────────────────────────── */
+    .module-selector{
+      display:grid;grid-template-columns:repeat(4,1fr);gap:10px;
+      margin-bottom:24px;
+    }
+    @media(max-width:640px){.module-selector{grid-template-columns:1fr 1fr}}
+    .module-btn{
+      background:var(--s1);border:1px solid rgba(201,168,76,.12);
+      border-radius:var(--r);padding:14px 10px;cursor:pointer;
+      transition:all .2s;text-align:center;position:relative;
+    }
+    .module-btn:hover:not(.locked){border-color:rgba(201,168,76,.4);background:var(--s2)}
+    .module-btn.active{border-color:var(--gold);background:rgba(201,168,76,.08)}
+    .module-btn.locked{opacity:.45;cursor:not-allowed}
+    .module-icon{font-size:1.2rem;margin-bottom:6px}
+    .module-name{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+    .module-desc{font-size:.72rem;color:var(--muted2);line-height:1.4}
+    .lock-icon{position:absolute;top:8px;right:8px;font-size:.7rem;opacity:.5}
+    .upgrade-hint{
+      font-size:.7rem;color:var(--gold-d);text-align:center;margin-bottom:16px;
+      font-family:'DM Mono',monospace;letter-spacing:.05em;
+    }
+    .upgrade-hint a{color:var(--gold);cursor:pointer;text-decoration:underline}
 
-    /* INPUT CARD */
+    /* ── TABS ──────────────────────────────────────────────────────────────── */
+    .tabs{display:flex;gap:4px;background:var(--s2);border-radius:var(--r);padding:4px;border:1px solid rgba(201,168,76,.12);margin-bottom:24px}
+    .tab{flex:1;background:none;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.07em;padding:9px 12px;border-radius:6px;cursor:pointer;transition:all .2s;text-align:center}
+    .tab.active{background:var(--gold);color:#000;font-weight:500}
+
+    /* ── CARD ──────────────────────────────────────────────────────────────── */
     .card{background:var(--s1);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);overflow:hidden;position:relative}
     .card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-    .card-body{padding:28px}
-    .input-tabs{display:flex;gap:4px;background:var(--s2);border-radius:var(--r);padding:4px;border:1px solid rgba(201,168,76,.1);margin-bottom:22px}
-    .itab{flex:1;background:none;border:none;color:var(--muted2);font-family:'DM Mono',monospace;font-size:.7rem;letter-spacing:.06em;padding:8px 8px;border-radius:6px;cursor:pointer;transition:all .2s;text-align:center}
-    .itab.active{background:var(--gold);color:#000;font-weight:500}
+    .card-body{padding:24px}
+
+    /* ── INPUT PANELS ──────────────────────────────────────────────────────── */
     .panel{display:none}.panel.active{display:block}
-    .field{margin-bottom:15px}
-    .field label{display:block;font-family:'DM Mono',monospace;font-size:.66rem;color:var(--gold-d);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
-    .field input,.field textarea,.field select{width:100%;background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.87rem;padding:10px 13px;outline:none;transition:border-color .2s;resize:vertical;}
-    .field input::placeholder,.field textarea::placeholder{color:#333}
+    .field{margin-bottom:14px}
+    .field label{display:block;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold-d);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+    .field input,.field textarea,.field select{width:100%;background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);color:var(--white);font-family:'DM Sans',sans-serif;font-size:.88rem;padding:10px 13px;outline:none;transition:border-color .2s;resize:vertical}
+    .field input::placeholder,.field textarea::placeholder{color:#3a3a3a}
     .field input:focus,.field textarea:focus,.field select:focus{border-color:rgba(201,168,76,.45)}
     .field select option{background:var(--s2)}
-    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
-    .top-row{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.05)}
-
-    /* MULTI FILE UPLOAD */
-    .upload-area{display:flex;flex-direction:column;gap:10px}
-    .upload-hint{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:.07em;margin-bottom:6px;padding:8px 12px;background:rgba(201,168,76,.06);border-radius:6px;border-left:2px solid var(--gold)}
-    .upload-slots{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
-    .upload-slot{border:1.5px dashed rgba(201,168,76,.22);border-radius:var(--r);padding:18px 12px;text-align:center;cursor:pointer;transition:all .2s;position:relative;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-    .upload-slot:hover,.upload-slot.over{border-color:var(--gold);background:var(--gold-g)}
-    .upload-slot.filled{border-color:rgba(201,168,76,.5);border-style:solid;background:rgba(201,168,76,.05)}
-    .upload-slot input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-    .slot-icon{font-size:1.2rem;margin-bottom:5px}
-    .slot-label{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.05em}
-    .slot-name{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);margin-top:4px;word-break:break-all;line-height:1.3}
-    .slot-remove{position:absolute;top:4px;right:6px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:.8rem;padding:2px 4px;line-height:1}
-    .slot-remove:hover{color:#e74c3c}
-    .upload-compare-note{font-size:.73rem;color:var(--muted);text-align:center;margin-top:4px}
-
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .big-textarea{min-height:150px;font-family:'DM Mono',monospace;font-size:.78rem;line-height:1.6}
+    .top-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,.05)}
+    .form-section-title{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase;margin:16px 0 10px}
     .section-divider{border:none;border-top:1px solid rgba(255,255,255,.05);margin:16px 0}
-    .form-section-title{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--gold-d);letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px;margin-top:4px}
 
-    /* VALIDATION */
-    .validation-msg{display:none;background:rgba(230,126,34,.08);border:1px solid rgba(230,126,34,.25);border-radius:var(--r);padding:12px 16px;margin-top:12px}
-    .validation-msg.on{display:block}
-    .validation-title{font-family:'DM Mono',monospace;font-size:.68rem;color:#e67e22;letter-spacing:.08em;margin-bottom:8px}
-    .validation-list{list-style:none;display:flex;flex-direction:column;gap:5px}
-    .validation-list li{font-size:.82rem;color:#e67e22;display:flex;align-items:flex-start;gap:8px}
-    .validation-list li::before{content:'⚠';font-size:.75rem;flex-shrink:0;margin-top:1px}
+    /* ── UPLOAD ────────────────────────────────────────────────────────────── */
+    .upload-zone{border:1.5px dashed rgba(201,168,76,.28);border-radius:var(--r);padding:30px 20px;text-align:center;cursor:pointer;transition:all .25s;position:relative}
+    .upload-zone:hover,.upload-zone.over{border-color:var(--gold);background:var(--gold-g)}
+    .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .upload-icon svg{width:28px;height:28px;color:var(--gold);margin-bottom:8px}
+    .upload-label{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--gold);letter-spacing:.07em}
+    .upload-sub{font-size:.72rem;color:var(--muted);margin-top:4px}
+    .upload-hint-text{font-size:.72rem;color:var(--muted2);margin-top:8px;font-style:italic;line-height:1.5}
+    .slots{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .slot{
+      display:flex;align-items:center;gap:10px;background:var(--s2);
+      border:1px dashed rgba(201,168,76,.2);border-radius:var(--r);
+      padding:10px 14px;cursor:pointer;transition:all .2s;position:relative;
+    }
+    .slot:hover,.slot.over{border-color:var(--gold);background:rgba(201,168,76,.05)}
+    .slot input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+    .slot-icon{font-size:.9rem;flex-shrink:0}
+    .slot-label{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted2);flex:1;letter-spacing:.05em}
+    .slot-file{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--gold);flex:1;display:none}
+    .slot-remove{background:none;border:none;color:var(--muted);cursor:pointer;font-size:.9rem;padding:2px;display:none;z-index:2;position:relative}
 
-    .cta{margin-top:22px;display:flex;justify-content:flex-end;gap:12px;align-items:center}
-    .btn{border:none;padding:10px 26px;border-radius:var(--r);font-family:'DM Mono',monospace;font-size:.76rem;font-weight:500;letter-spacing:.07em;cursor:pointer;transition:all .2s}
+    /* ── CTA ───────────────────────────────────────────────────────────────── */
+    .cta{margin-top:20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .cta-right{display:flex;gap:10px;align-items:center}
+    .btn{border:none;padding:10px 24px;border-radius:var(--r);font-family:'DM Mono',monospace;font-size:.76rem;font-weight:500;letter-spacing:.07em;cursor:pointer;transition:all .2s}
     .btn-primary{background:var(--gold);color:#000}
     .btn-primary:hover{opacity:.88;transform:translateY(-1px)}
     .btn-primary:disabled{opacity:.35;cursor:not-allowed;transform:none}
     .btn-ghost{background:transparent;color:var(--muted2);border:1px solid rgba(255,255,255,.1);font-size:.7rem}
     .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+    .guide-link{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold-d);letter-spacing:.07em;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;transition:color .2s}
+    .guide-link:hover{color:var(--gold)}
+
+    /* ── LOADER ────────────────────────────────────────────────────────────── */
     .loader{display:none;text-align:center;padding:48px}
     .loader.on{display:block}
-    .spinner{width:34px;height:34px;border:2px solid rgba(201,168,76,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 14px}
+    .spinner{width:36px;height:36px;border:2px solid rgba(201,168,76,.15);border-top-color:var(--gold);border-radius:50%;animation:spin .85s linear infinite;margin:0 auto 16px}
     @keyframes spin{to{transform:rotate(360deg)}}
     .loader-text{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--gold);letter-spacing:.1em}
-    .err{display:none;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:var(--r);padding:12px 16px;font-size:.83rem;color:#e74c3c;margin-top:12px}
+
+    /* ── ERROR ─────────────────────────────────────────────────────────────── */
+    .err{display:none;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);border-radius:var(--r);padding:10px 14px;font-size:.81rem;color:#e74c3c;margin-top:12px}
     .err.on{display:block}
 
-    /* DATA QUALITY BANNER */
-    .dq-banner{display:none;border-radius:var(--r);padding:14px 18px;margin-bottom:16px;font-size:.84rem;line-height:1.5}
-    .dq-banner.on{display:flex;align-items:flex-start;gap:12px}
-    .dq-partial{background:rgba(230,126,34,.08);border:1px solid rgba(230,126,34,.25);color:#e67e22}
-    .dq-insufficient{background:rgba(192,57,43,.08);border:1px solid rgba(192,57,43,.25);color:#e74c3c}
-    .dq-icon{font-size:1rem;flex-shrink:0}
-    .dq-text{flex:1}
-    .dq-btn{margin-top:8px;background:none;border:1px solid currentColor;border-radius:6px;color:inherit;font-family:'DM Mono',monospace;font-size:.65rem;padding:5px 12px;cursor:pointer;letter-spacing:.06em;transition:all .15s}
-    .dq-btn:hover{opacity:.75}
-
-    /* REPORT */
+    /* ── REPORT ────────────────────────────────────────────────────────────── */
     .report{display:none;margin-top:28px}
     .report.on{display:block}
-    .report-actions{display:flex;justify-content:flex-end;gap:10px;margin-bottom:14px}
-    .report-header{background:var(--s1);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);padding:26px 30px;margin-bottom:18px;position:relative;overflow:hidden;}
+    .report-header{background:var(--s1);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);padding:24px 28px;margin-bottom:18px;position:relative;overflow:hidden}
     .report-header::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-    .report-header::after{content:'';position:absolute;bottom:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(201,168,76,.07) 0%,transparent 70%);border-radius:50%;}
-    .report-type-tag{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px;opacity:.7}
-    .report-period{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--muted2);letter-spacing:.12em;margin-bottom:8px}
+    .report-period{font-family:'DM Mono',monospace;font-size:.65rem;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:8px}
     .report-title{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;margin-bottom:12px}
-    .report-summary{font-size:.87rem;color:var(--muted2);line-height:1.75;max-width:580px}
-    .kpis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
-    .kpi-card{background:var(--s1);border:1px solid rgba(201,168,76,.12);border-radius:var(--r);padding:15px;position:relative;overflow:hidden;}
+    .report-summary{font-size:.88rem;color:var(--muted2);line-height:1.75;max-width:580px}
+    .data-quality-badge{display:inline-flex;align-items:center;gap:5px;font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.07em;padding:3px 9px;border-radius:3px;margin-top:10px;text-transform:uppercase}
+    .dq-good{background:rgba(39,174,96,.12);color:#2ecc71;border:1px solid rgba(39,174,96,.2)}
+    .dq-partial{background:rgba(230,126,34,.12);color:#e67e22;border:1px solid rgba(230,126,34,.2)}
+    .dq-insufficient{background:rgba(192,57,43,.12);color:#e74c3c;border:1px solid rgba(192,57,43,.2)}
+    .kpis-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:18px}
+    .kpi-card{background:var(--s1);border:1px solid rgba(201,168,76,.12);border-radius:var(--r);padding:16px;position:relative;overflow:hidden}
     .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
-    .kpi-label{font-family:'DM Mono',monospace;font-size:.59rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
-    .kpi-value{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:700;line-height:1;margin-bottom:5px}
-    .kpi-change{font-family:'DM Mono',monospace;font-size:.65rem;display:flex;align-items:center;gap:4px}
+    .kpi-label{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px}
+    .kpi-value{font-family:'Cormorant Garamond',serif;font-size:1.65rem;font-weight:700;line-height:1;margin-bottom:5px}
+    .kpi-change{font-family:'DM Mono',monospace;font-size:.66rem;display:flex;align-items:center;gap:4px}
     .trend-up{color:var(--pos)}.trend-down{color:var(--crit)}.trend-neutral{color:var(--muted)}
-    .section-card{background:var(--s1);border:1px solid rgba(201,168,76,.12);border-radius:var(--r);margin-bottom:14px;overflow:hidden}
-    .section-card-header{padding:14px 18px 0;font-family:'DM Mono',monospace;font-size:.62rem;color:var(--gold-d);letter-spacing:.14em;text-transform:uppercase}
-    .section-card-body{padding:14px 18px 18px}
-    .alerts-list{display:flex;flex-direction:column;gap:8px}
-    .alert-item{display:flex;align-items:flex-start;gap:11px;padding:10px 14px;border-radius:var(--r);font-size:.83rem;line-height:1.5;}
-    .alert-crit{background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);color:#e74c3c}
-    .alert-warn{background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.25);color:#e67e22}
-    .alert-pos{background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.25);color:#2ecc71}
-    .alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:5px}
-    .dot-crit{background:#e74c3c}.dot-warn{background:#e67e22}.dot-pos{background:#2ecc71}
+    .section-title{font-family:'DM Mono',monospace;font-size:.63rem;color:var(--gold-d);letter-spacing:.14em;text-transform:uppercase;margin-bottom:10px}
     .rank-table{width:100%;border-collapse:collapse}
     .rank-table tr{border-bottom:1px solid rgba(255,255,255,.04)}
     .rank-table tr:last-child{border-bottom:none}
-    .rank-table td{padding:8px 8px;font-size:.83rem;vertical-align:top}
-    .rank-num{font-family:'DM Mono',monospace;font-size:.67rem;color:var(--gold);width:26px}
+    .rank-table td{padding:9px 8px;font-size:.84rem;vertical-align:top}
+    .rank-num{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--gold);width:24px}
     .rank-name{color:var(--white)}
-    .rank-val{color:var(--muted2);font-family:'DM Mono',monospace;font-size:.74rem;text-align:right;white-space:nowrap}
-    .rank-note{color:var(--muted);font-size:.72rem;display:block;margin-top:2px}
-    .tops-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:14px}
-    .forecast-box{background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:var(--r);padding:18px;}
-    .forecast-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+    .rank-val{color:var(--muted2);font-family:'DM Mono',monospace;font-size:.75rem;text-align:right;white-space:nowrap}
+    .rank-note{color:var(--muted);font-size:.73rem;display:block;margin-top:1px}
+    .alerts-list{display:flex;flex-direction:column;gap:8px}
+    .alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-radius:var(--r);font-size:.83rem;line-height:1.5}
+    .alert-crit{background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.25);color:#e74c3c}
+    .alert-warn{background:rgba(230,126,34,.1);border:1px solid rgba(230,126,34,.25);color:#e67e22}
+    .alert-pos{background:rgba(39,174,96,.1);border:1px solid rgba(39,174,96,.25);color:#2ecc71}
+    .alert-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;margin-top:6px}
+    .dot-crit{background:#e74c3c}.dot-warn{background:#e67e22}.dot-pos{background:#2ecc71}
+    .forecast-box{background:var(--s2);border:1px solid rgba(201,168,76,.15);border-radius:var(--r);padding:20px}
+    .forecast-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:8px}
     .forecast-period{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600}
-    .forecast-estimate{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--gold);font-weight:700}
-    .confidence-badge{font-family:'DM Mono',monospace;font-size:.59rem;letter-spacing:.08em;padding:2px 8px;border-radius:3px;text-transform:uppercase;}
+    .forecast-estimate{font-family:'Cormorant Garamond',serif;font-size:1.65rem;color:var(--gold);font-weight:700}
+    .confidence-badge{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.07em;padding:2px 8px;border-radius:3px;text-transform:uppercase}
     .conf-high{background:rgba(39,174,96,.15);color:#2ecc71;border:1px solid rgba(39,174,96,.25)}
     .conf-medium{background:rgba(230,126,34,.15);color:#e67e22;border:1px solid rgba(230,126,34,.25)}
     .conf-low{background:rgba(192,57,43,.15);color:#e74c3c;border:1px solid rgba(192,57,43,.25)}
-    .forecast-rationale{font-size:.83rem;color:var(--muted2);line-height:1.7;margin-bottom:11px}
-    .forecast-actions{display:flex;flex-direction:column;gap:6px}
-    .forecast-action{display:flex;align-items:flex-start;gap:8px;font-size:.81rem;color:#bbb}
+    .forecast-rationale{font-size:.83rem;color:var(--muted2);line-height:1.7;margin-bottom:12px}
+    .forecast-action{display:flex;align-items:flex-start;gap:8px;font-size:.81rem;color:#bbb;margin-bottom:5px}
     .forecast-action::before{content:'→';color:var(--gold);flex-shrink:0}
     .comparison-text{font-size:.86rem;color:var(--muted2);line-height:1.75;font-style:italic;border-left:2px solid var(--gold);padding-left:14px}
-    .data-table{width:100%;border-collapse:collapse;font-size:.81rem}
-    .data-table th{font-family:'DM Mono',monospace;font-size:.59rem;color:var(--gold-d);letter-spacing:.08em;text-transform:uppercase;padding:7px 10px;text-align:left;border-bottom:1px solid rgba(201,168,76,.15)}
-    .data-table td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top;color:var(--muted2)}
-    .data-table tr:last-child td{border-bottom:none}
-    .data-table .highlight{color:var(--white)}
-    .data-table .bad{color:#e74c3c}
-    .data-table .ok{color:#2ecc71}
-    .status-pill{font-family:'DM Mono',monospace;font-size:.59rem;padding:2px 7px;border-radius:10px}
-    .status-ok{background:rgba(39,174,96,.12);color:#2ecc71;border:1px solid rgba(39,174,96,.2)}
-    .status-review{background:rgba(230,126,34,.12);color:#e67e22;border:1px solid rgba(230,126,34,.2)}
-    .status-critical{background:rgba(192,57,43,.12);color:#e74c3c;border:1px solid rgba(192,57,43,.2)}
-    .effort-pill{font-family:'DM Mono',monospace;font-size:.58rem;padding:2px 7px;border-radius:10px}
-    .effort-low{background:rgba(39,174,96,.1);color:#2ecc71}
-    .effort-medium{background:rgba(230,126,34,.1);color:#e67e22}
-    .effort-high{background:rgba(192,57,43,.1);color:#e74c3c}
-    .pnl-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:4px}
-    .pnl-item{background:var(--s2);border:1px solid rgba(201,168,76,.1);border-radius:var(--r);padding:13px}
-    .pnl-label{font-family:'DM Mono',monospace;font-size:.59rem;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
-    .pnl-value{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600}
-    .pnl-margin{font-family:'DM Mono',monospace;font-size:.68rem;color:var(--gold);margin-top:3px}
-    .savings-total{background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);border-radius:var(--r);padding:15px 18px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}
-    .savings-label{font-family:'DM Mono',monospace;font-size:.66rem;color:var(--gold-d);letter-spacing:.1em;text-transform:uppercase}
-    .savings-amount{font-family:'Cormorant Garamond',serif;font-size:1.7rem;color:var(--gold);font-weight:700}
+    .tops-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+    .report-actions{display:flex;justify-content:flex-end;gap:8px;margin-bottom:18px}
+    .divider{height:1px;background:rgba(255,255,255,.05);margin:18px 0}
 
-    /* CHAT */
-    #chatBtn{position:fixed;bottom:26px;right:26px;display:none;align-items:center;gap:10px;background:var(--gold);color:#000;border:none;border-radius:30px;padding:12px 18px 12px 14px;font-family:'DM Mono',monospace;font-size:.72rem;font-weight:500;letter-spacing:.07em;cursor:pointer;box-shadow:0 6px 28px rgba(201,168,76,.35);z-index:200;transition:all .2s;}
+    /* ── UPGRADE MODAL ─────────────────────────────────────────────────────── */
+    #upgradeModal{
+      position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;
+      display:none;align-items:center;justify-content:center;padding:24px;
+      backdrop-filter:blur(8px);
+    }
+    #upgradeModal.open{display:flex}
+    .upgrade-card{
+      background:var(--s1);border:1px solid rgba(201,168,76,.25);border-radius:16px;
+      padding:36px;max-width:420px;width:100%;position:relative;overflow:hidden;
+    }
+    .upgrade-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+    .upgrade-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;margin-bottom:8px}
+    .upgrade-desc{font-size:.83rem;color:var(--muted2);margin-bottom:20px;line-height:1.6}
+    .plans-mini{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+    .plan-mini{
+      display:flex;justify-content:space-between;align-items:center;
+      background:var(--s2);border:1px solid rgba(201,168,76,.12);border-radius:var(--r);padding:12px 16px;
+    }
+    .plan-mini-name{font-family:'DM Mono',monospace;font-size:.72rem;color:var(--gold);letter-spacing:.07em}
+    .plan-mini-price{font-family:'Cormorant Garamond',serif;font-size:1.1rem;font-weight:600}
+    .plan-mini-features{font-size:.72rem;color:var(--muted2)}
+    .upgrade-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.1rem;line-height:1}
+    .upgrade-close:hover{color:var(--white)}
+    .upgrade-note{font-size:.72rem;color:var(--muted);text-align:center;margin-top:12px}
+
+    /* ── CHATBOT ───────────────────────────────────────────────────────────── */
+    #chatBtn{position:fixed;bottom:24px;right:24px;display:none;align-items:center;gap:8px;background:var(--gold);color:#000;border:none;border-radius:28px;padding:11px 16px 11px 12px;font-family:'DM Mono',monospace;font-size:.7rem;font-weight:500;letter-spacing:.07em;cursor:pointer;box-shadow:0 6px 28px rgba(201,168,76,.35);z-index:200;transition:all .2s}
     #chatBtn.show{display:flex}
     #chatBtn:hover{transform:translateY(-2px);box-shadow:0 10px 36px rgba(201,168,76,.45)}
-    #chatBtn svg{width:17px;height:17px;flex-shrink:0}
-    #chatBtn .nbadge{background:#000;color:var(--gold);font-size:.58rem;padding:1px 6px;border-radius:10px;font-weight:700}
-    #chatOverlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;display:none;align-items:flex-end;justify-content:flex-end;padding:22px;backdrop-filter:blur(6px);}
+    #chatBtn svg{width:16px;height:16px;flex-shrink:0}
+    #chatBtn .nbadge{background:#000;color:var(--gold);font-size:.55rem;padding:1px 5px;border-radius:10px;font-weight:700}
+    #chatOverlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:300;display:none;align-items:flex-end;justify-content:flex-end;padding:20px;backdrop-filter:blur(6px)}
     #chatOverlay.open{display:flex}
-    #chatWindow{width:430px;height:640px;background:#111;border:1px solid rgba(201,168,76,.2);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:chatslide .25s cubic-bezier(.34,1.56,.64,1);}
-    @keyframes chatslide{from{opacity:0;transform:translateY(24px) scale(.96)}to{opacity:1;transform:none}}
-    #chatHeader{background:var(--s1);padding:14px 18px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(201,168,76,.1);}
-    .chat-avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cormorant Garamond',serif;font-weight:700;color:#000;font-size:.95rem}
+    #chatWindow{width:420px;height:620px;background:#111;border:1px solid rgba(201,168,76,.2);border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.6);animation:chatslide .25s cubic-bezier(.34,1.56,.64,1)}
+    @keyframes chatslide{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+    #chatHeader{background:var(--s1);padding:12px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(201,168,76,.1)}
+    .chat-avatar{width:32px;height:32px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:'Cormorant Garamond',serif;font-weight:700;color:#000;font-size:.9rem}
     .chat-header-info{flex:1}
-    .chat-header-name{font-family:'Cormorant Garamond',serif;font-size:.95rem;font-weight:600;margin-bottom:2px}
-    .chat-header-status{font-family:'DM Mono',monospace;font-size:.61rem;color:var(--gold);display:flex;align-items:center;gap:5px}
+    .chat-header-name{font-family:'Cormorant Garamond',serif;font-size:.92rem;font-weight:600;margin-bottom:1px}
+    .chat-header-status{font-family:'DM Mono',monospace;font-size:.59rem;color:var(--gold);display:flex;align-items:center;gap:4px}
     .chat-header-status::before{content:'';width:5px;height:5px;background:#4caf50;border-radius:50%;display:inline-block}
+    .chat-header-actions{display:flex;align-items:center;gap:6px}
+    #chatExportBtn{background:none;border:1px solid rgba(201,168,76,.2);color:var(--gold-d);cursor:pointer;padding:4px 8px;border-radius:4px;font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.05em;transition:all .2s}
+    #chatExportBtn:hover{border-color:var(--gold);color:var(--gold)}
     #chatClose{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px;display:flex}
     #chatClose:hover{color:var(--white)}
-    #chatClose svg{width:16px;height:16px;fill:currentColor}
-    #chatReportPills{display:flex;gap:5px;padding:8px 14px;border-bottom:1px solid rgba(201,168,76,.08);flex-wrap:wrap}
-    .report-pill{font-family:'DM Mono',monospace;font-size:.6rem;padding:3px 9px;border-radius:10px;letter-spacing:.05em;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
-    #chatMessages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:9px;background:#111}
+    #chatClose svg{width:15px;height:15px;fill:currentColor}
+    #chatReportPills{display:flex;gap:4px;padding:7px 12px;border-bottom:1px solid rgba(201,168,76,.08);flex-wrap:wrap}
+    .report-pill{font-family:'DM Mono',monospace;font-size:.58rem;letter-spacing:.06em;padding:2px 8px;border-radius:10px;border:1px solid rgba(201,168,76,.2);color:var(--gold-d);text-transform:uppercase}
+    .report-pill.active{background:rgba(201,168,76,.12);color:var(--gold);border-color:rgba(201,168,76,.3)}
+    #chatMessages{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px;background:#111}
     #chatMessages::-webkit-scrollbar{width:3px}
     #chatMessages::-webkit-scrollbar-thumb{background:rgba(201,168,76,.2);border-radius:3px}
-    .cmsg{max-width:86%;padding:9px 13px;border-radius:13px;font-size:.83rem;line-height:1.55;animation:msgfade .18s ease;}
-    @keyframes msgfade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-    .cmsg.bot{background:var(--s1);color:var(--white);align-self:flex-start;border-bottom-left-radius:4px;border:1px solid rgba(201,168,76,.1)}
-    .cmsg.user{background:var(--gold);color:#000;align-self:flex-end;border-bottom-right-radius:4px}
-    .cmsg.typing{background:var(--s1);align-self:flex-start;border:1px solid rgba(201,168,76,.1)}
-    .typing-dots{display:flex;gap:4px;padding:2px 0}
-    .typing-dots span{width:5px;height:5px;background:var(--muted2);border-radius:50%;animation:tdot 1.2s infinite}
-    .typing-dots span:nth-child(2){animation-delay:.2s}
-    .typing-dots span:nth-child(3){animation-delay:.4s}
-    @keyframes tdot{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
-    #chatSuggestions{display:flex;flex-wrap:wrap;gap:5px;padding:0 13px 9px}
-    .sugg{background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.18);border-radius:20px;padding:5px 11px;font-family:'DM Mono',monospace;font-size:.61rem;color:var(--gold);cursor:pointer;transition:all .15s;letter-spacing:.04em}
-    .sugg:hover{background:rgba(201,168,76,.15)}
-    #chatFooter{padding:11px 13px;background:var(--s1);border-top:1px solid rgba(201,168,76,.1);display:flex;gap:7px;align-items:flex-end}
-    #chatInput{flex:1;background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:10px;padding:8px 12px;font-size:.83rem;font-family:'DM Sans',sans-serif;color:var(--white);outline:none;resize:none;max-height:90px;line-height:1.4;transition:border-color .2s}
+    .msg{max-width:86%;padding:9px 13px;border-radius:12px;font-size:.82rem;line-height:1.55;word-wrap:break-word}
+    .msg-user{align-self:flex-end;background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.2);border-bottom-right-radius:3px;color:var(--white)}
+    .msg-bot{align-self:flex-start;background:var(--s2);border:1px solid rgba(255,255,255,.06);border-bottom-left-radius:3px;color:var(--muted2)}
+    .msg-bot strong{color:var(--white)}
+    .msg-bot h2,.msg-bot h3{color:var(--gold);font-family:'Cormorant Garamond',serif;font-weight:600;margin:8px 0 4px;font-size:.95rem}
+    .msg-bot ul,.msg-bot ol{padding-left:16px;margin:4px 0}
+    .msg-bot li{margin:2px 0}
+    .msg-bot p{margin:4px 0}
+    .msg-typing{align-self:flex-start;background:var(--s2);border:1px solid rgba(255,255,255,.06);border-radius:12px;border-bottom-left-radius:3px;padding:10px 14px;display:flex;gap:4px}
+    .dot{width:5px;height:5px;border-radius:50%;background:var(--muted2);animation:bounce .9s infinite}
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+    #chatSuggestions{display:flex;flex-wrap:wrap;gap:5px;padding:0 11px 8px}
+    .suggestion{background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:20px;padding:4px 10px;font-size:.71rem;color:var(--muted2);cursor:pointer;transition:all .2s;font-family:'DM Mono',monospace;letter-spacing:.04em}
+    .suggestion:hover{border-color:var(--gold);color:var(--gold)}
+    #chatFooter{padding:10px 11px;background:var(--s1);border-top:1px solid rgba(201,168,76,.1);display:flex;gap:6px;align-items:flex-end}
+    #chatInput{flex:1;background:var(--s2);border:1px solid rgba(201,168,76,.14);border-radius:10px;padding:8px 11px;font-size:.82rem;font-family:'DM Sans',sans-serif;color:var(--white);outline:none;resize:none;max-height:80px;line-height:1.4;transition:border-color .2s}
     #chatInput:focus{border-color:rgba(201,168,76,.4)}
     #chatInput::placeholder{color:#333}
-    #chatSend{width:34px;height:34px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+    #chatSend{width:32px;height:32px;border-radius:50%;background:var(--gold);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
     #chatSend:hover{opacity:.85;transform:scale(1.07)}
     #chatSend:disabled{background:var(--s3);cursor:not-allowed;transform:none}
-    #chatSend svg{width:15px;height:15px;fill:none;stroke:#000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+    #chatSend svg{width:14px;height:14px;fill:none;stroke:#000;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-    .footer-tag{text-align:center;margin-top:44px;font-family:'DM Mono',monospace;font-size:.59rem;color:#222;letter-spacing:.1em}
+    /* ── FOOTER ────────────────────────────────────────────────────────────── */
+    .footer-tag{text-align:center;margin-top:48px;font-family:'DM Mono',monospace;font-size:.6rem;color:#2a2a2a;letter-spacing:.1em}
 
-    @media(max-width:700px){
-      .report-type-bar,.session-bar{grid-template-columns:1fr 1fr}
+    @media(max-width:640px){
       .tops-grid{grid-template-columns:1fr}
       .grid-2{grid-template-columns:1fr}
-      .upload-slots{grid-template-columns:1fr}
       .kpis-grid{grid-template-columns:1fr 1fr}
       .top-row{grid-template-columns:1fr}
       #chatWindow{width:100%;height:100%;border-radius:0}
       #chatOverlay{padding:0}
+      header{padding:14px 20px}
     }
-
-    /* ── CHAT MARKDOWN RENDERING ─────────────────────────────────────────── */
-    .cmsg.bot h2{font-size:13px;font-weight:700;color:var(--gold);margin:12px 0 6px 0;padding-bottom:3px;border-bottom:1px solid rgba(201,168,76,.2);letter-spacing:.3px;font-family:'DM Mono',monospace;}
-    .cmsg.bot h2:first-child{margin-top:2px}
-    .cmsg.bot h3{font-size:11.5px;font-weight:700;color:#f0d97a;margin:10px 0 5px 0;font-family:'DM Mono',monospace;}
-    .cmsg.bot p{margin:0 0 7px 0;color:#cccccc;font-size:.83rem;line-height:1.6}
-    .cmsg.bot p:last-child{margin-bottom:0}
-    .cmsg.bot ul{margin:3px 0 9px 0;padding-left:0;list-style:none;}
-    .cmsg.bot ul li{position:relative;padding-left:13px;margin-bottom:4px;color:#cccccc;font-size:.83rem;line-height:1.55}
-    .cmsg.bot ul li::before{content:'–';position:absolute;left:0;color:var(--gold);font-weight:700}
-    .cmsg.bot strong{color:#ffffff;font-weight:700}
   </style>
 </head>
 <body>
 
-<!-- LOGIN — não alterado -->
-<div id="loginOverlay">
-  <div class="login-box">
-    <div class="login-logo">
+<!-- ── AUTH OVERLAY ─────────────────────────────────────────────────────────── -->
+<div id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-logo">Sales<span>Lab</span></div>
+    <div class="auth-tagline">Análise financeira com IA para PMEs.<br>Sem consultores. Sem Excel. Em 2 minutos.</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('free')">Começar grátis</button>
+      <button class="auth-tab" onclick="switchAuthTab('token')">Tenho acesso</button>
+    </div>
+
+    <!-- FREE TAB -->
+    <div id="auth-free" class="auth-panel active">
+      <p class="auth-desc">Experimente com 1 análise gratuita. Sem cartão, sem compromisso.</p>
+      <ul class="plan-features">
+        <li>1 módulo à sua escolha</li>
+        <li>1 análise completa com KPIs, alertas e previsão</li>
+        <li>Exportação em PDF</li>
+      </ul>
+      <input type="email" class="auth-input" id="freeEmail" placeholder="O seu email profissional" autocomplete="email"/>
+      <button class="auth-btn" id="freeBtn" onclick="startFree()">Começar grátis →</button>
+      <div class="auth-err" id="freeErr"></div>
+      <p class="auth-terms">Ao continuar aceita os termos de utilização. O email é usado apenas para contacto.</p>
+    </div>
+
+    <!-- TOKEN TAB -->
+    <div id="auth-token" class="auth-panel">
+      <p class="auth-desc">Introduza o código de acesso recebido após a subscrição.</p>
+      <input type="text" class="auth-input" id="tokenInput" placeholder="Código de acesso" autocomplete="off"/>
+      <button class="auth-btn" id="tokenBtn" onclick="loginWithToken()">Entrar →</button>
+      <div class="auth-err" id="tokenErr"></div>
+      <div class="auth-divider"></div>
+      <p class="auth-desc" style="font-size:.75rem">Ainda não tem acesso? Escolha um plano:</p>
+      <div class="plans-mini">
+        <div class="plan-mini">
+          <div><div class="plan-mini-name">Starter</div><div class="plan-mini-features">2 módulos · 15 análises/mês</div></div>
+          <div class="plan-mini-price">€59<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+        </div>
+        <div class="plan-mini">
+          <div><div class="plan-mini-name">Pro</div><div class="plan-mini-features">4 módulos · 30 análises/mês</div></div>
+          <div class="plan-mini-price">€109<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+        </div>
+        <div class="plan-mini" style="border-color:rgba(201,168,76,.3)">
+          <div><div class="plan-mini-name" style="color:var(--gold)">Team</div><div class="plan-mini-features">4 módulos · Ilimitado · Chatbot IA</div></div>
+          <div class="plan-mini-price" style="color:var(--gold)">€199<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+        </div>
+      </div>
+      <p style="font-size:.7rem;color:var(--muted2);text-align:center">Contacte-nos em saleslab@gmail.com para subscrever.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ── UPGRADE MODAL ─────────────────────────────────────────────────────────── -->
+<div id="upgradeModal" onclick="if(event.target===this)closeUpgrade()">
+  <div class="upgrade-card">
+    <button class="upgrade-close" onclick="closeUpgrade()">✕</button>
+    <div class="upgrade-title">Faça upgrade</div>
+    <div class="upgrade-desc" id="upgradeDesc">Para aceder a esta funcionalidade, escolha um plano.</div>
+    <div class="plans-mini">
+      <div class="plan-mini">
+        <div><div class="plan-mini-name">Starter</div><div class="plan-mini-features">2 módulos · 15 análises/mês · sem chatbot</div></div>
+        <div class="plan-mini-price">€59<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+      </div>
+      <div class="plan-mini">
+        <div><div class="plan-mini-name">Pro</div><div class="plan-mini-features">4 módulos · 30 análises/mês · sem chatbot</div></div>
+        <div class="plan-mini-price">€109<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+      </div>
+      <div class="plan-mini" style="border-color:rgba(201,168,76,.3)">
+        <div><div class="plan-mini-name" style="color:var(--gold)">Team</div><div class="plan-mini-features">4 módulos · Ilimitado · Chatbot IA + PDF</div></div>
+        <div class="plan-mini-price" style="color:var(--gold)">€199<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
+      </div>
+    </div>
+    <p class="upgrade-note">Contacte saleslab@gmail.com para activar o seu plano.</p>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────────────────────────── -->
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
       <svg viewBox="0 0 36 36" fill="none">
         <rect x="3" y="22" width="6" height="10" rx="1" stroke="#c9a84c" stroke-width="1.3"/>
         <rect x="13" y="14" width="6" height="18" rx="1" stroke="#c9a84c" stroke-width="1.3"/>
@@ -310,210 +445,179 @@
         <path d="M4 18 L14 10 L24 4" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
         <circle cx="24" cy="4" r="2" fill="#c9a84c"/>
       </svg>
-      <div class="login-logo-text">Lab<span>Suite</span></div>
+      <div class="logo-text">Sales<span>Lab</span></div>
     </div>
-    <div class="login-title">Introduza o código de acesso</div>
-    <div class="login-card">
-      <label class="login-label">Código de acesso</label>
-      <input class="login-input" type="password" id="loginInput" placeholder="· · · · · · · ·"
-             onkeydown="if(event.key==='Enter')checkLogin()" autocomplete="off"/>
-      <button class="login-btn" onclick="checkLogin()">Entrar →</button>
-      <div class="login-err" id="loginErr">Código incorrecto. Tente novamente.</div>
+    <div class="header-right">
+      <span class="analyses-counter" id="analysesCounter"></span>
+      <span class="plan-badge" id="planBadge">Free</span>
+      <button class="logout-btn" onclick="logout()">Sair</button>
     </div>
-    <div class="login-footer">LabSuite · Acesso restrito</div>
-  </div>
-</div>
+  </header>
 
-<!-- APP -->
-<div id="app">
-<header>
-  <div class="logo">
-    <svg viewBox="0 0 36 36" fill="none">
-      <rect x="3" y="22" width="6" height="10" rx="1" stroke="#c9a84c" stroke-width="1.3"/>
-      <rect x="13" y="14" width="6" height="18" rx="1" stroke="#c9a84c" stroke-width="1.3"/>
-      <rect x="23" y="7" width="6" height="25" rx="1" stroke="#c9a84c" stroke-width="1.3"/>
-      <path d="M4 18 L14 10 L24 4" stroke="#c9a84c" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
-      <circle cx="24" cy="4" r="2" fill="#c9a84c"/>
-    </svg>
-    <div class="logo-text">Sales<span>Lab</span></div>
-  </div>
-  <div class="header-badge" id="headerBadge">Relatórios de Vendas</div>
-</header>
-
-<div class="hero">
-  <div class="hero-tag">SalesLab · Inteligência de Negócio</div>
-  <h1 id="heroTitle">Relatórios de vendas <em>gerados por IA</em></h1>
-  <p id="heroDesc">Carregue um ficheiro, cole os dados ou preencha o formulário. Análise completa em segundos.</p>
-</div>
-
-<div class="wrap">
-
-  <!-- Session tracker -->
-  <div class="session-bar" id="sessionBar">
-    <div class="session-item" id="sess-sales" onclick="viewSessionReport('sales')">
-      <div class="session-dot"></div>
-      <div class="session-label">Vendas</div>
-      <div class="session-view">ver →</div>
-    </div>
-    <div class="session-item" id="sess-efficiency" onclick="viewSessionReport('efficiency')">
-      <div class="session-dot"></div>
-      <div class="session-label">Eficiência</div>
-      <div class="session-view">ver →</div>
-    </div>
-    <div class="session-item" id="sess-cost" onclick="viewSessionReport('cost')">
-      <div class="session-dot"></div>
-      <div class="session-label">Custos</div>
-      <div class="session-view">ver →</div>
-    </div>
-    <div class="session-item" id="sess-financial" onclick="viewSessionReport('financial')">
-      <div class="session-dot"></div>
-      <div class="session-label">Financeiro</div>
-      <div class="session-view">ver →</div>
-    </div>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-tag" id="heroBadge">Análise de Negócio</div>
+    <h1 id="heroTitle">Relatórios <em>gerados por IA</em></h1>
+    <p id="heroDesc">Carregue os seus dados em qualquer formato. O sistema analisa, identifica oportunidades e gera recomendações concretas em segundos.</p>
   </div>
 
-  <!-- Report type selector -->
-  <div class="report-type-bar">
-    <button class="rtype-btn active" onclick="setReportType('sales',this)">
-      <div class="rtype-check">✓</div>
-      <div class="rtype-icon">💰</div>
-      <span class="rtype-label">Vendas</span>
-      <div class="rtype-desc">KPIs, rankings, previsão</div>
-    </button>
-    <button class="rtype-btn" onclick="setReportType('efficiency',this)">
-      <div class="rtype-check">✓</div>
-      <div class="rtype-icon">⚡</div>
-      <span class="rtype-label">Eficiência</span>
-      <div class="rtype-desc">Custo por output, bottlenecks</div>
-    </button>
-    <button class="rtype-btn" onclick="setReportType('cost',this)">
-      <div class="rtype-check">✓</div>
-      <div class="rtype-icon">✂️</div>
-      <span class="rtype-label">Custos</span>
-      <div class="rtype-desc">Onde cortar despesas</div>
-    </button>
-    <button class="rtype-btn" onclick="setReportType('financial',this)">
-      <div class="rtype-check">✓</div>
-      <div class="rtype-icon">📊</div>
-      <span class="rtype-label">Financeiro</span>
-      <div class="rtype-desc">P&L, EBITDA, margem</div>
-    </button>
-  </div>
+  <div class="wrap">
 
-  <!-- Input card -->
-  <div class="card" style="margin-bottom:0">
-    <div class="card-body">
-      <div class="top-row">
-        <div class="field">
-          <label>Nome da empresa</label>
-          <input type="text" id="companyName" placeholder="Ex: Grupo Nortex"/>
-        </div>
-        <div class="field">
-          <label>Moeda</label>
-          <select id="currency">
-            <option value="EUR">EUR €</option>
-            <option value="USD">USD $</option>
-            <option value="BRL">BRL R$</option>
-            <option value="GBP">GBP £</option>
-          </select>
-        </div>
-      </div>
+    <!-- MODULE SELECTOR -->
+    <div class="module-selector" id="moduleSelector">
+      <button class="module-btn active" id="mod-sales" onclick="setModule('sales', this)">
+        <div class="module-icon">📊</div>
+        <div class="module-name">Vendas</div>
+        <div class="module-desc">KPIs, rankings e previsão</div>
+      </button>
+      <button class="module-btn" id="mod-efficiency" onclick="setModule('efficiency', this)">
+        <div class="module-icon">⚡</div>
+        <div class="module-name">Eficiência</div>
+        <div class="module-desc">Produtividade e bottlenecks</div>
+      </button>
+      <button class="module-btn" id="mod-cost" onclick="setModule('cost', this)">
+        <div class="module-icon">✂️</div>
+        <div class="module-name">Custos</div>
+        <div class="module-desc">Poupanças e anomalias</div>
+      </button>
+      <button class="module-btn" id="mod-financial" onclick="setModule('financial', this)">
+        <div class="module-icon">📈</div>
+        <div class="module-name">Financeiro</div>
+        <div class="module-desc">P&L e saúde financeira</div>
+      </button>
+    </div>
+    <div class="upgrade-hint" id="upgradeHint" style="display:none">
+      Plano Free: 1 módulo disponível. <a onclick="openUpgrade('módulos adicionais')">Ver planos →</a>
+    </div>
 
-      <div class="input-tabs">
-        <button class="itab active" onclick="switchTab('file')">📂 Ficheiro</button>
-        <button class="itab" onclick="switchTab('text')">📋 Colar Dados</button>
-        <button class="itab" onclick="switchTab('form')">✏️ Formulário</button>
-      </div>
-
-      <!-- FILE TAB -->
-      <div class="panel active" id="panel-file">
-        <div class="upload-hint" id="uploadHint">Ex: relatório de vendas mensal, extracto CRM, CSV de vendas</div>
-        <div class="upload-slots">
-          <div class="upload-slot" id="slot0" ondragover="slotDrag(event,0,true)" ondragleave="slotDrag(event,0,false)" ondrop="slotDrop(event,0)">
-            <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,0)"/>
-            <div class="slot-icon">📄</div>
-            <div class="slot-label">Ficheiro 1</div>
-            <div class="slot-name" id="slotName0"></div>
-            <button class="slot-remove" id="slotRemove0" onclick="removeSlot(event,0)" style="display:none">✕</button>
+    <!-- INPUT CARD -->
+    <div class="card" style="margin-bottom:0">
+      <div class="card-body">
+        <div class="top-row">
+          <div class="field">
+            <label>Nome da empresa</label>
+            <input type="text" id="companyName" placeholder="Ex: Grupo Nortex"/>
           </div>
-          <div class="upload-slot" id="slot1" ondragover="slotDrag(event,1,true)" ondragleave="slotDrag(event,1,false)" ondrop="slotDrop(event,1)">
-            <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,1)"/>
-            <div class="slot-icon">📄</div>
-            <div class="slot-label">Ficheiro 2 <span style="color:var(--muted);font-size:.6rem">(opcional)</span></div>
-            <div class="slot-name" id="slotName1"></div>
-            <button class="slot-remove" id="slotRemove1" onclick="removeSlot(event,1)" style="display:none">✕</button>
-          </div>
-          <div class="upload-slot" id="slot2" ondragover="slotDrag(event,2,true)" ondragleave="slotDrag(event,2,false)" ondrop="slotDrop(event,2)">
-            <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,2)"/>
-            <div class="slot-icon">📄</div>
-            <div class="slot-label">Ficheiro 3 <span style="color:var(--muted);font-size:.6rem">(opcional)</span></div>
-            <div class="slot-name" id="slotName2"></div>
-            <button class="slot-remove" id="slotRemove2" onclick="removeSlot(event,2)" style="display:none">✕</button>
+          <div class="field">
+            <label>Moeda</label>
+            <select id="currency">
+              <option value="EUR">EUR €</option>
+              <option value="USD">USD $</option>
+              <option value="BRL">BRL R$</option>
+              <option value="GBP">GBP £</option>
+            </select>
           </div>
         </div>
-        <div class="upload-compare-note" id="compareNote" style="display:none">
-          💡 Múltiplos ficheiros detectados — o relatório irá comparar os períodos automaticamente
+
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('file')">📂 Ficheiro</button>
+          <button class="tab" onclick="switchTab('text')">📋 Colar Dados</button>
+          <button class="tab" onclick="switchTab('form')">✏️ Formulário</button>
+        </div>
+
+        <!-- PANEL: File -->
+        <div class="panel active" id="panel-file">
+          <div class="upload-zone" id="uploadZone">
+            <input type="file" id="fileInput0" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,0)"/>
+            <div class="upload-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+            <div class="upload-label">Clique ou arraste ficheiros</div>
+            <div class="upload-sub">CSV · TXT · Excel · PDF · Máx. 5MB cada</div>
+            <div class="upload-hint-text" id="uploadHint">Qualquer formato que já use: relatórios do CRM, extratos bancários,<br>exports contabilísticos, folhas Excel, PDFs de gestão</div>
+          </div>
+          <div class="slots" id="slotsContainer">
+            <div class="slot" id="slot0" ondragover="slotDrag(event,0,true)" ondragleave="slotDrag(event,0,false)" ondrop="slotDrop(event,0)">
+              <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,0)"/>
+              <span class="slot-icon">📄</span>
+              <span class="slot-label">Ficheiro 1 — clique ou arraste</span>
+              <span class="slot-file" id="slotFile0"></span>
+              <button class="slot-remove" id="slotRemove0" onclick="removeSlot(event,0)">✕</button>
+            </div>
+            <div class="slot" id="slot1" ondragover="slotDrag(event,1,true)" ondragleave="slotDrag(event,1,false)" ondrop="slotDrop(event,1)">
+              <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,1)"/>
+              <span class="slot-icon">📄</span>
+              <span class="slot-label">Ficheiro 2 (opcional)</span>
+              <span class="slot-file" id="slotFile1"></span>
+              <button class="slot-remove" id="slotRemove1" onclick="removeSlot(event,1)">✕</button>
+            </div>
+            <div class="slot" id="slot2" ondragover="slotDrag(event,2,true)" ondragleave="slotDrag(event,2,false)" ondrop="slotDrop(event,2)">
+              <input type="file" accept=".csv,.txt,.xlsx,.xls,.pdf" onchange="slotFile(event,2)"/>
+              <span class="slot-icon">📄</span>
+              <span class="slot-label">Ficheiro 3 (opcional)</span>
+              <span class="slot-file" id="slotFile2"></span>
+              <button class="slot-remove" id="slotRemove2" onclick="removeSlot(event,2)">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL: Text -->
+        <div class="panel" id="panel-text">
+          <div class="field">
+            <label>Cole aqui os dados</label>
+            <textarea class="big-textarea" id="rawData" placeholder="Cole qualquer formato: CSV copiado, tabela do Excel, texto do email com os números, dados do CRM, ou simplesmente escreva os valores. O Sales Lab interpreta tudo."></textarea>
+          </div>
+        </div>
+
+        <!-- PANEL: Form -->
+        <div class="panel" id="panel-form">
+          <div id="formFields"></div>
+        </div>
+
+        <!-- CTA -->
+        <div class="cta">
+          <a class="guide-link" onclick="downloadGuide()" title="Guia de tipos de documentos aceites">
+            <span>↓</span> Guia de documentos
+          </a>
+          <div class="cta-right">
+            <button class="btn btn-ghost" onclick="resetAll()">Limpar</button>
+            <button class="btn btn-primary" id="analyseBtn" onclick="analyse()">Gerar Relatório →</button>
+          </div>
+        </div>
+        <div class="err" id="errMsg"></div>
+      </div>
+    </div>
+
+    <!-- LOADER -->
+    <div class="loader" id="loader">
+      <div class="spinner"></div>
+      <div class="loader-text" id="loaderText">A analisar dados...</div>
+    </div>
+
+    <!-- REPORT -->
+    <div class="report" id="report">
+      <div class="report-actions">
+        <button class="btn btn-ghost" onclick="exportReportPDF()">⬇ Exportar PDF</button>
+      </div>
+      <div class="report-header" id="rHeader">
+        <div class="report-period" id="rPeriod"></div>
+        <div class="report-title" id="rTitle">Relatório</div>
+        <div class="report-summary" id="rSummary"></div>
+        <div id="rDataQuality"></div>
+      </div>
+      <div class="kpis-grid" id="kpisGrid"></div>
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-body">
+          <div class="section-title">Alertas & Destaques</div>
+          <div class="alerts-list" id="alertsList"></div>
         </div>
       </div>
-
-      <!-- TEXT TAB -->
-      <div class="panel" id="panel-text">
-        <div class="field">
-          <label id="pasteLabel">Cole aqui os dados</label>
-          <textarea class="big-textarea" id="rawData" placeholder="Cole CSV, tabela Excel, ou qualquer texto com os dados relevantes..."></textarea>
+      <div class="card" style="margin-bottom:18px" id="comparisonCard">
+        <div class="card-body">
+          <div class="section-title" id="narrativeLabel">Análise Comparativa</div>
+          <div class="comparison-text" id="comparisonText"></div>
         </div>
       </div>
-
-      <!-- FORM TAB -->
-      <div class="panel" id="panel-form">
-        <div id="formContent"></div>
+      <div class="tops-grid" id="topsGrid"></div>
+      <div class="card" style="margin-bottom:18px" id="forecastCard">
+        <div class="card-body">
+          <div class="section-title">Previsão — Próximo Período</div>
+          <div class="forecast-box" id="forecastBox"></div>
+        </div>
       </div>
-
-      <!-- Validation -->
-      <div class="validation-msg" id="validationMsg">
-        <div class="validation-title">⚠ Dados em falta</div>
-        <ul class="validation-list" id="validationList"></ul>
-      </div>
-
-      <div class="cta">
-        <button class="btn btn-ghost" onclick="resetCurrent()">Limpar</button>
-        <button class="btn btn-primary" id="analyseBtn" onclick="analyse()">Gerar Relatório →</button>
-      </div>
-      <div class="err" id="errMsg"></div>
+      <div id="extraSections"></div>
     </div>
-  </div>
 
-  <div class="loader" id="loader">
-    <div class="spinner"></div>
-    <div class="loader-text" id="loaderText">A analisar dados...</div>
+    <div class="footer-tag">SalesLab · Powered by Claude AI · 2026</div>
   </div>
-
-  <!-- Data quality banner -->
-  <div class="dq-banner" id="dqBanner">
-    <div class="dq-icon">⚠️</div>
-    <div class="dq-text">
-      <div id="dqMessage"></div>
-      <button class="dq-btn" onclick="openChatForData()">Completar dados com o assistente →</button>
-    </div>
-  </div>
-
-  <!-- Report output -->
-  <div class="report" id="report">
-    <div class="report-actions">
-      <button class="btn btn-ghost" onclick="exportPDF()">⬇ Exportar PDF</button>
-    </div>
-    <div class="report-header">
-      <div class="report-type-tag" id="rTypeTag"></div>
-      <div class="report-period" id="rPeriod"></div>
-      <div class="report-title" id="rTitle"></div>
-      <div class="report-summary" id="rSummary"></div>
-    </div>
-    <div class="kpis-grid" id="kpisGrid"></div>
-    <div id="reportBody"></div>
-  </div>
-
-  <div class="footer-tag">SalesLab · Powered by Claude AI · Miguel Cardoso · 2026</div>
-</div>
 </div>
 
 <!-- CHAT BUTTON -->
@@ -521,7 +625,7 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
   </svg>
-  Analisar com IA
+  Analista IA
   <span class="nbadge" id="chatBadge">0</span>
 </button>
 
@@ -531,19 +635,23 @@
     <div id="chatHeader">
       <div class="chat-avatar">L</div>
       <div class="chat-header-info">
-        <div class="chat-header-name">Analista LabSuite</div>
+        <div class="chat-header-name">Analista SalesLab</div>
         <div class="chat-header-status" id="chatStatus">Pronto</div>
       </div>
-      <button id="chatClose" onclick="closeChat()">
-        <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
-      </button>
+      <div class="chat-header-actions">
+        <button id="chatExportBtn" onclick="exportChatPDF()" title="Exportar conversa como PDF">⬇ PDF</button>
+        <button id="chatClose" onclick="closeChat()">
+          <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
     </div>
     <div id="chatReportPills"></div>
     <div id="chatMessages"></div>
     <div id="chatSuggestions"></div>
     <div id="chatFooter">
       <textarea id="chatInput" placeholder="Faz uma pergunta sobre os relatórios..." rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+        oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px'"></textarea>
       <button id="chatSend" onclick="sendChat()">
         <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
       </button>
@@ -552,23 +660,244 @@
 </div>
 
 <script>
+// ── CONFIG ──────────────────────────────────────────────────────────────────
 const BACKEND_URL = "https://web-production-74559.up.railway.app";
-const ACCESS_CODE = "272120";
 
-// ── AUTH ──────────────────────────────────────────────────────────────────────
-function checkLogin() {
-  const val = document.getElementById("loginInput").value.trim();
-  if (val === ACCESS_CODE) {
-    document.getElementById("loginOverlay").classList.add("hidden");
-    document.getElementById("app").classList.add("visible");
-  } else {
-    document.getElementById("loginErr").classList.add("on");
-    document.getElementById("loginInput").value = "";
-    document.getElementById("loginInput").focus();
+// ── PLAN STATE ──────────────────────────────────────────────────────────────
+let currentToken     = null;
+let currentPlan      = null;
+let currentModules   = 0;
+let hasChatbot       = false;
+let analysesLeft     = 0;
+let selectedFreeModule = "sales"; // for free plan, which module was chosen
+
+// ── FINGERPRINT ─────────────────────────────────────────────────────────────
+let fingerprint = "";
+(async () => {
+  try {
+    // Simple fingerprint from browser characteristics (no external library needed)
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    ctx.textBaseline = "top";
+    ctx.font = "14px Arial";
+    ctx.fillText("SalesLab", 0, 0);
+    const raw = [
+      navigator.userAgent,
+      navigator.language,
+      screen.width + "x" + screen.height,
+      new Date().getTimezoneOffset(),
+      canvas.toDataURL().slice(-50),
+    ].join("|");
+    // Simple hash
+    let hash = 0;
+    for (let i = 0; i < raw.length; i++) {
+      hash = ((hash << 5) - hash) + raw.charCodeAt(i);
+      hash |= 0;
+    }
+    fingerprint = Math.abs(hash).toString(36);
+  } catch(e) { fingerprint = "unknown"; }
+})();
+
+// ── AUTH TAB SWITCH ─────────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll(".auth-tab").forEach((b, i) => {
+    b.classList.toggle("active", ["free","token"][i] === tab);
+  });
+  document.getElementById("auth-free").classList.toggle("active", tab === "free");
+  document.getElementById("auth-token").classList.toggle("active", tab === "token");
+}
+
+// ── FREE REGISTRATION ────────────────────────────────────────────────────────
+async function startFree() {
+  const email = document.getElementById("freeEmail").value.trim();
+  const errEl = document.getElementById("freeErr");
+  const btn   = document.getElementById("freeBtn");
+  errEl.classList.remove("on");
+
+  if (!email || !email.includes("@")) {
+    errEl.textContent = "Por favor introduza um email válido.";
+    errEl.classList.add("on");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "A registar...";
+
+  try {
+    const fd = new FormData();
+    fd.append("email", email);
+    fd.append("fingerprint", fingerprint);
+
+    const res = await fetch(`${BACKEND_URL}/register-free`, { method: "POST", body: fd });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.detail || "Erro ao registar.");
+
+    saveAndLogin(data.token);
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.add("on");
+    btn.disabled = false;
+    btn.textContent = "Começar grátis →";
   }
 }
 
-// ── STATE ─────────────────────────────────────────────────────────────────────
+// ── TOKEN LOGIN ──────────────────────────────────────────────────────────────
+async function loginWithToken() {
+  const token = document.getElementById("tokenInput").value.trim();
+  const errEl = document.getElementById("tokenErr");
+  const btn   = document.getElementById("tokenBtn");
+  errEl.classList.remove("on");
+
+  if (!token) {
+    errEl.textContent = "Por favor introduza o código de acesso.";
+    errEl.classList.add("on");
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = "A validar...";
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/validate-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Token inválido.");
+    saveAndLogin(token, data);
+  } catch(e) {
+    errEl.textContent = e.message;
+    errEl.classList.add("on");
+    btn.disabled = false;
+    btn.textContent = "Entrar →";
+  }
+}
+
+// ── SAVE & INIT SESSION ──────────────────────────────────────────────────────
+async function saveAndLogin(token, info = null) {
+  localStorage.setItem("sl_token", token);
+  if (!info) {
+    const res = await fetch(`${BACKEND_URL}/validate-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    info = await res.json();
+  }
+  currentToken   = token;
+  currentPlan    = info.plan;
+  currentModules = info.modules;
+  hasChatbot     = info.chatbot;
+  analysesLeft   = info.remaining;
+
+  document.getElementById("authOverlay").classList.add("hidden");
+  document.getElementById("app").classList.add("visible");
+
+  updatePlanUI();
+  setupModules();
+  setModule("sales", document.getElementById("mod-sales"));
+}
+
+// ── CHECK EXISTING TOKEN ON LOAD ─────────────────────────────────────────────
+async function checkExistingToken() {
+  const saved = localStorage.getItem("sl_token");
+  if (!saved) return;
+  try {
+    const res = await fetch(`${BACKEND_URL}/validate-token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: saved }),
+    });
+    if (!res.ok) { localStorage.removeItem("sl_token"); return; }
+    const info = await res.json();
+    await saveAndLogin(saved, info);
+  } catch(e) { /* ignore, show auth */ }
+}
+
+// ── PLAN UI ──────────────────────────────────────────────────────────────────
+function updatePlanUI() {
+  const badge = document.getElementById("planBadge");
+  const counter = document.getElementById("analysesCounter");
+
+  const labels = { free:"Free", starter:"Starter", pro:"Pro", team:"Team", admin:"Admin", test:"Teste" };
+  badge.textContent = labels[currentPlan] || currentPlan;
+  badge.className = `plan-badge ${currentPlan}`;
+
+  if (currentPlan === "free") {
+    counter.textContent = analysesLeft > 0 ? "1 análise disponível" : "Análise utilizada";
+    counter.className = `analyses-counter ${analysesLeft <= 0 ? "zero" : ""}`;
+  } else if (currentPlan === "starter" || currentPlan === "pro") {
+    const limit = currentPlan === "starter" ? 15 : 30;
+    counter.textContent = `${analysesLeft} de ${limit} análises`;
+    counter.className = `analyses-counter ${analysesLeft <= 3 ? "low" : ""} ${analysesLeft <= 0 ? "zero" : ""}`;
+  } else {
+    counter.textContent = "";
+  }
+
+  // Show chatbot button only for team/admin/test
+  if (hasChatbot) {
+    document.getElementById("chatBtn").classList.add("show");
+  }
+}
+
+// ── MODULE SETUP ─────────────────────────────────────────────────────────────
+const MODULE_ORDER = ["sales", "efficiency", "cost", "financial"];
+
+function setupModules() {
+  // Free: only 1 module (user picks any, locked after first analysis)
+  // Starter: 2 modules (first 2 in order — but let user choose which 2)
+  // Pro/Team/Admin/Test: all 4
+
+  const hint = document.getElementById("upgradeHint");
+
+  if (currentPlan === "free") {
+    // Show all modules but mark 3 as locked (user picks 1)
+    MODULE_ORDER.forEach((m, i) => {
+      const btn = document.getElementById(`mod-${m}`);
+      if (i > 0) {
+        btn.classList.add("locked");
+        if (!btn.querySelector(".lock-icon")) {
+          const lock = document.createElement("span");
+          lock.className = "lock-icon";
+          lock.textContent = "🔒";
+          btn.appendChild(lock);
+        }
+      }
+    });
+    hint.style.display = "block";
+    hint.innerHTML = `Plano Free: 1 módulo disponível. <a onclick="openUpgrade('mais módulos')">Ver planos →</a>`;
+
+  } else if (currentPlan === "starter") {
+    // First 2 unlocked, last 2 locked
+    MODULE_ORDER.forEach((m, i) => {
+      const btn = document.getElementById(`mod-${m}`);
+      if (i >= 2) {
+        btn.classList.add("locked");
+        if (!btn.querySelector(".lock-icon")) {
+          const lock = document.createElement("span");
+          lock.className = "lock-icon";
+          lock.textContent = "🔒";
+          btn.appendChild(lock);
+        }
+      }
+    });
+    hint.style.display = "block";
+    hint.innerHTML = `Plano Starter: 2 módulos disponíveis. <a onclick="openUpgrade('todos os módulos')">Upgrade para Pro →</a>`;
+
+  } else {
+    hint.style.display = "none";
+  }
+}
+
+function isModuleAllowed(moduleType) {
+  if (currentPlan === "free") return !document.getElementById(`mod-${moduleType}`)?.classList.contains("locked");
+  if (currentPlan === "starter") return MODULE_ORDER.indexOf(moduleType) < 2;
+  return true;
+}
+
+// ── APP STATE ────────────────────────────────────────────────────────────────
 let currentTab        = "file";
 let currentReportType = "sales";
 let selectedFiles     = [null, null, null];
@@ -578,18 +907,15 @@ let chatMessages      = [];
 let chatInitialised   = false;
 let askingForData     = false;
 
-// ── REPORT META ───────────────────────────────────────────────────────────────
+// ── REPORT META ──────────────────────────────────────────────────────────────
 const REPORT_META = {
   sales: {
-    badge: "Relatórios de Vendas",
-    title: "Relatórios de vendas <em>gerados por IA</em>",
+    badge: "Análise de Vendas", title: "Relatórios de vendas <em>gerados por IA</em>",
     desc: "Carregue ficheiros de vendas, cole dados do CRM ou preencha o formulário. KPIs, rankings e previsão em segundos.",
     loader: "A analisar dados de vendas...",
-    typeLabel: "Relatório de Vendas",
-    uploadHint: "Ex: relatório de vendas mensal, extracto CRM, CSV de transacções, facturação",
-    pasteHint: "Cole dados de vendas: CSV, tabela do Excel copiada, ou texto com receitas e produtos",
+    uploadHint: "Relatórios de vendas, extractos do CRM (Salesforce, HubSpot, Pipedrive), CSVs de facturação, folhas Excel",
+    pasteHint: "Cole dados de vendas: CSV, tabela copiada, texto com receitas e produtos, export de qualquer software",
     suggestions: ["Onde posso melhorar?", "Qual é o risco principal?", "O que fazer no próximo mês?", "Quem está abaixo do esperado?"],
-    requiredMin: ["Período ou data", "Receita ou volume de vendas"],
     formFields: `
       <div class="form-section-title">Períodos</div>
       <div class="grid-2">
@@ -604,22 +930,19 @@ const REPORT_META = {
         <div class="field"><label>Unidades vendidas (anterior)</label><input type="text" id="f_unitsPrevious" placeholder="Ex: 291"/></div>
       </div>
       <hr class="section-divider"/>
-      <div class="form-section-title">Rankings</div>
+      <div class="form-section-title">Rankings (opcional)</div>
       <div class="field"><label>Top produtos / serviços</label><input type="text" id="f_topProducts" placeholder="Ex: Software Pro €54k, Consultoria €32k"/></div>
       <div class="field"><label>Top clientes</label><input type="text" id="f_topClients" placeholder="Ex: Empresa A €28k, Empresa B €21k"/></div>
-      <div class="field"><label>Top vendedores</label><input type="text" id="f_topSalespeople" placeholder="Ex: Ana Silva €38k, João Mota €29k"/></div>
-      <div class="field"><label>Notas adicionais (opcional)</label><textarea rows="2" id="f_extraNotes" placeholder="Campanhas, descontos, sazonalidade..."></textarea></div>`
+      <div class="field"><label>Top vendedores / colaboradores</label><input type="text" id="f_topSalespeople" placeholder="Ex: Ana Silva €38k, João Mota €29k"/></div>
+      <div class="field"><label>Notas adicionais</label><textarea rows="2" id="f_extraNotes" placeholder="Campanhas, sazonalidade, eventos relevantes..."></textarea></div>`
   },
   efficiency: {
-    badge: "Relatórios de Eficiência",
-    title: "Análise de eficiência <em>operacional</em>",
+    badge: "Análise de Eficiência", title: "Análise de eficiência <em>operacional</em>",
     desc: "Identifique o custo por output de cada equipa. Descubra onde está a desperdiçar horas e dinheiro.",
     loader: "A calcular rácios de eficiência...",
-    typeLabel: "Relatório de Eficiência",
-    uploadHint: "Ex: folha de horas por colaborador, registo de turnos, output por equipa, relatório de produtividade",
+    uploadHint: "Folhas de horas, registo de turnos, output por equipa, relatórios de produtividade, exports do ERP",
     pasteHint: "Cole dados de produtividade: horas trabalhadas, output produzido, custo de pessoal por colaborador ou equipa",
     suggestions: ["Qual equipa tem pior rácio?", "Quanto estou a desperdiçar?", "Que acções têm mais impacto?", "Onde estão os bottlenecks?"],
-    requiredMin: ["Nome das equipas ou colaboradores", "Horas trabalhadas ou custo", "Output ou produtividade"],
     formFields: `
       <div class="form-section-title">Período</div>
       <div class="grid-2">
@@ -628,168 +951,149 @@ const REPORT_META = {
       </div>
       <hr class="section-divider"/>
       <div class="form-section-title">Equipas / Colaboradores</div>
-      <div class="field"><label>Equipas ou colaboradores com horas trabalhadas</label>
-        <textarea rows="4" id="f_teamData" placeholder="Ex:&#10;Equipa A: 160h trabalhadas, 48 quartos limpos, custo €2.400&#10;Equipa B: 180h trabalhadas, 42 quartos limpos, custo €2.700&#10;João: 80h, 24 sessões, €1.200&#10;Ana: 75h, 31 sessões, €1.125"></textarea>
+      <div class="field"><label>Dados por equipa ou colaborador</label>
+        <textarea rows="4" id="f_teamData" placeholder="Ex:&#10;Equipa A: 160h, 48 unidades, custo €2.400&#10;Equipa B: 180h, 42 unidades, custo €2.700&#10;João: 80h, 24 sessões, €1.200"></textarea>
       </div>
       <div class="grid-2">
-        <div class="field"><label>Métrica de output</label><input type="text" id="f_outputMetric" placeholder="Ex: quartos limpos, sessões, peças produzidas"/></div>
+        <div class="field"><label>Métrica de output</label><input type="text" id="f_outputMetric" placeholder="Ex: unidades, sessões, peças"/></div>
         <div class="field"><label>Custo total de pessoal</label><input type="text" id="f_totalLaborCost" placeholder="Ex: €18.500"/></div>
       </div>
-      <hr class="section-divider"/>
-      <div class="field"><label>Problemas conhecidos (opcional)</label><textarea rows="2" id="f_extraNotes" placeholder="Ex: equipamento avariado, formação em curso, pico sazonal..."></textarea></div>`
+      <div class="field"><label>Problemas conhecidos (opcional)</label><textarea rows="2" id="f_extraNotes" placeholder="Avarias, formações, pico sazonal..."></textarea></div>`
   },
   cost: {
-    badge: "Análise de Custos",
-    title: "Onde <em>cortar custos</em> sem perder qualidade",
+    badge: "Análise de Custos", title: "Onde <em>cortar custos</em> sem perder qualidade",
     desc: "Identifica gastos desnecessários e oportunidades de poupança com impacto directo na margem.",
     loader: "A identificar oportunidades de poupança...",
-    typeLabel: "Análise de Custos",
-    uploadHint: "Ex: extracto bancário, lista de despesas, facturas por categoria, balancete de gastos",
-    pasteHint: "Cole despesas por categoria: nome da categoria, valor do mês actual e anterior, fornecedor",
+    uploadHint: "Extractos bancários, lista de despesas, facturas por categoria, balancetes, exports contabilísticos (Primavera, SAP, PHC)",
+    pasteHint: "Cole despesas por categoria: nome da categoria, valor actual e anterior, fornecedor",
     suggestions: ["Qual o custo mais urgente a cortar?", "Quanto poupo em 6 meses?", "Que corte tem menos risco?", "Onde estou acima do benchmark?"],
-    requiredMin: ["Categorias de custos com valores", "Período de referência"],
     formFields: `
       <div class="form-section-title">Período</div>
       <div class="grid-2">
-        <div class="field"><label>Mês / período actual</label><input type="text" id="f_periodCurrent" placeholder="Ex: Março 2026"/></div>
-        <div class="field"><label>Mês / período anterior</label><input type="text" id="f_periodPrevious" placeholder="Ex: Fevereiro 2026"/></div>
+        <div class="field"><label>Período actual</label><input type="text" id="f_periodCurrent" placeholder="Ex: Março 2026"/></div>
+        <div class="field"><label>Período anterior</label><input type="text" id="f_periodPrevious" placeholder="Ex: Fevereiro 2026"/></div>
       </div>
       <hr class="section-divider"/>
-      <div class="form-section-title">Custos por categoria</div>
-      <div class="field"><label>Lista de custos (actual vs anterior)</label>
-        <textarea rows="6" id="f_costsData" placeholder="Ex:&#10;Pessoal: €14.200 (anterior: €13.800)&#10;Renda: €2.500 (anterior: €2.500)&#10;Fornecedores: €8.400 (anterior: €6.200)&#10;Marketing: €1.800 (anterior: €900)&#10;Electricidade: €620 (anterior: €480)&#10;Software: €340 (anterior: €240)"></textarea>
+      <div class="form-section-title">Custos por Categoria</div>
+      <div class="field"><label>Lista de custos</label>
+        <textarea rows="6" id="f_costData" placeholder="Ex:&#10;Pessoal: €18.500 (mês anterior: €17.800)&#10;Renda: €3.200&#10;Electricidade: €890 (mês anterior: €630)&#10;Telecomunicações: €450&#10;Consumíveis: €1.200&#10;Marketing: €600"></textarea>
       </div>
       <div class="grid-2">
-        <div class="field"><label>Receita do período actual</label><input type="text" id="f_revenueCurrent" placeholder="Ex: €38.000 (para calcular % custos)"/></div>
-        <div class="field"><label>Sector de actividade</label><input type="text" id="f_sector" placeholder="Ex: fisioterapia, limpezas, restauração"/></div>
+        <div class="field"><label>Receita total do período</label><input type="text" id="f_revenueCurrent" placeholder="Ex: €48.000"/></div>
+        <div class="field"><label>Total de custos</label><input type="text" id="f_totalCosts" placeholder="Ex: €36.000"/></div>
       </div>
-      <div class="field"><label>Contexto adicional (opcional)</label><textarea rows="2" id="f_extraNotes" placeholder="Ex: aumentámos equipa, novo fornecedor, equipamento novo..."></textarea></div>`
+      <div class="field"><label>Notas sobre variações</label><textarea rows="2" id="f_extraNotes" placeholder="Explique aumentos ou reduções significativas..."></textarea></div>`
   },
   financial: {
-    badge: "Relatório Financeiro",
-    title: "Visão financeira <em>completa</em> do negócio",
-    desc: "P&L, EBITDA, margens e previsão. Visão de direcção do estado financeiro da empresa.",
+    badge: "Análise Financeira", title: "Relatório financeiro <em>nível CFO</em>",
+    desc: "P&L simplificado, margens, cash flow e previsão. Tudo o que precisa para gerir com dados.",
     loader: "A processar dados financeiros...",
-    typeLabel: "Relatório Financeiro",
-    uploadHint: "Ex: balancete, P&L do período, extracto contabilístico, demonstração de resultados, relatório do TOC",
-    pasteHint: "Cole dados financeiros: receitas, custos, resultados — qualquer formato exportado da contabilidade",
-    suggestions: ["Qual é a minha margem líquida?", "Estou a melhorar ou a piorar?", "Qual é o maior risco financeiro?", "Que KPI devo monitorizar?"],
-    requiredMin: ["Receita total", "Custos ou despesas", "Período de referência"],
+    uploadHint: "P&L, balanços, extractos contabilísticos (Primavera, SAP, Sage, PHC, QuickBooks), relatórios de gestão",
+    pasteHint: "Cole qualquer dado financeiro: receita, custos, margens, resultado líquido, fluxo de caixa",
+    suggestions: ["Qual é a minha margem real?", "Estou a crescer de forma saudável?", "Onde está o dinheiro?", "O que me preocupa mais?"],
     formFields: `
       <div class="form-section-title">Período</div>
       <div class="grid-2">
-        <div class="field"><label>Período actual</label><input type="text" id="f_periodCurrent" placeholder="Ex: Q1 2026 / Janeiro 2026"/></div>
-        <div class="field"><label>Período anterior</label><input type="text" id="f_periodPrevious" placeholder="Ex: Q1 2025 / Janeiro 2025"/></div>
+        <div class="field"><label>Período actual</label><input type="text" id="f_periodCurrent" placeholder="Ex: Q1 2026"/></div>
+        <div class="field"><label>Período anterior</label><input type="text" id="f_periodPrevious" placeholder="Ex: Q1 2025"/></div>
       </div>
       <hr class="section-divider"/>
       <div class="form-section-title">Demonstração de Resultados</div>
       <div class="grid-2">
-        <div class="field"><label>Receita (actual)</label><input type="text" id="f_revenueCurrent" placeholder="Ex: €142.000"/></div>
-        <div class="field"><label>Receita (anterior)</label><input type="text" id="f_revenuePrevious" placeholder="Ex: €118.000"/></div>
-        <div class="field"><label>Custo dos produtos/serviços (COGS)</label><input type="text" id="f_cogs" placeholder="Ex: €68.000"/></div>
-        <div class="field"><label>Despesas operacionais (OPEX)</label><input type="text" id="f_opex" placeholder="Ex: €42.000"/></div>
-        <div class="field"><label>Resultado líquido</label><input type="text" id="f_netResult" placeholder="Ex: €18.400 ou -€4.200"/></div>
-        <div class="field"><label>Caixa / saldo bancário</label><input type="text" id="f_cash" placeholder="Ex: €34.000"/></div>
+        <div class="field"><label>Receita total</label><input type="text" id="f_revenueCurrent" placeholder="Ex: €138.640"/></div>
+        <div class="field"><label>COGS (custo dos bens/serviços)</label><input type="text" id="f_cogs" placeholder="Ex: €63.120"/></div>
+        <div class="field"><label>Despesas operacionais</label><input type="text" id="f_opex" placeholder="Ex: €30.650"/></div>
+        <div class="field"><label>Resultado líquido</label><input type="text" id="f_netResult" placeholder="Ex: €33.172"/></div>
       </div>
-      <hr class="section-divider"/>
-      <div class="field"><label>Estrutura de custos detalhada (opcional)</label>
-        <textarea rows="3" id="f_costsData" placeholder="Ex: Pessoal €28k, Renda €4k, Marketing €2k, Fornecedores €8k..."></textarea>
-      </div>
-      <div class="field"><label>Notas adicionais</label><textarea rows="2" id="f_extraNotes" placeholder="Investimentos, financiamentos, eventos extraordinários..."></textarea></div>`
+      <div class="field"><label>Receita período anterior</label><input type="text" id="f_revenuePrevious" placeholder="Ex: €121.480"/></div>
+      <div class="field"><label>Notas contabilísticas</label><textarea rows="2" id="f_extraNotes" placeholder="Lançamentos extraordinários, amortizações, provisões..."></textarea></div>`
   }
 };
 
-// ── REPORT TYPE ───────────────────────────────────────────────────────────────
-function setReportType(type, btn) {
+// ── SET MODULE ────────────────────────────────────────────────────────────────
+function setModule(type, btn) {
+  if (!btn) return;
+
+  // Check if locked
+  if (btn.classList.contains("locked")) {
+    openUpgrade(`o módulo ${type}`);
+    return;
+  }
+
   currentReportType = type;
-  document.querySelectorAll(".rtype-btn").forEach(b => b.classList.remove("active"));
+  document.querySelectorAll(".module-btn").forEach(b => b.classList.remove("active"));
   btn.classList.add("active");
+
   const meta = REPORT_META[type];
-  document.getElementById("headerBadge").textContent = meta.badge;
+  document.getElementById("heroBadge").textContent = meta.badge;
   document.getElementById("heroTitle").innerHTML = meta.title;
   document.getElementById("heroDesc").textContent = meta.desc;
-  document.getElementById("loaderText").textContent = meta.loader;
-  document.getElementById("uploadHint").textContent = meta.uploadHint;
-  document.getElementById("pasteLabel").textContent = meta.pasteHint.split(":")[0];
+  document.getElementById("uploadHint").innerHTML = meta.uploadHint;
   document.getElementById("rawData").placeholder = meta.pasteHint;
-  document.getElementById("formContent").innerHTML = meta.formFields;
-  hideValidation();
+  document.getElementById("formFields").innerHTML = meta.formFields || "";
+  document.getElementById("loaderText").textContent = meta.loader;
+
+  document.getElementById("report").classList.remove("on");
   hideErr();
-  if (sessionReports[type]) {
-    renderReport(sessionReports[type]);
-  } else {
-    document.getElementById("report").classList.remove("on");
-    document.getElementById("dqBanner").classList.remove("on");
-  }
 }
 
-// ── INPUT TABS ────────────────────────────────────────────────────────────────
+// ── TAB ───────────────────────────────────────────────────────────────────────
 function switchTab(tab) {
   currentTab = tab;
   document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
   document.getElementById("panel-" + tab).classList.add("active");
-  document.querySelectorAll(".itab").forEach((b, i) => b.classList.toggle("active", ["file","text","form"][i] === tab));
-  hideValidation();
+  document.querySelectorAll(".tab").forEach((b, i) => {
+    b.classList.toggle("active", ["file","text","form"][i] === tab);
+  });
 }
 
 // ── FILE SLOTS ────────────────────────────────────────────────────────────────
 function slotDrag(e, idx, over) { e.preventDefault(); document.getElementById("slot"+idx).classList.toggle("over", over); }
-function slotDrop(e, idx) { e.preventDefault(); slotDrag(e, idx, false); const f = e.dataTransfer.files[0]; if (f) setSlotFile(idx, f); }
-function slotFile(e, idx) { if (e.target.files[0]) setSlotFile(idx, e.target.files[0]); }
-
+function slotDrop(e, idx) { e.preventDefault(); slotDrag(e, idx, false); const f = e.dataTransfer.files[0]; if(f) setSlotFile(idx, f); }
+function slotFile(e, idx) { if(e.target.files[0]) setSlotFile(idx, e.target.files[0]); }
 function setSlotFile(idx, file) {
   selectedFiles[idx] = file;
-  document.getElementById("slot"+idx).classList.add("filled");
-  document.getElementById("slotName"+idx).textContent = file.name;
+  document.getElementById("slotFile"+idx).textContent = "📄 " + file.name;
+  document.getElementById("slotFile"+idx).style.display = "block";
+  document.getElementById("slot"+idx).querySelector(".slot-label").style.display = "none";
   document.getElementById("slotRemove"+idx).style.display = "block";
-  const filled = selectedFiles.filter(Boolean).length;
-  document.getElementById("compareNote").style.display = filled > 1 ? "block" : "none";
 }
-
 function removeSlot(e, idx) {
-  e.stopPropagation();
+  e.stopPropagation(); e.preventDefault();
   selectedFiles[idx] = null;
-  document.getElementById("slot"+idx).classList.remove("filled");
-  document.getElementById("slotName"+idx).textContent = "";
+  document.getElementById("slotFile"+idx).style.display = "none";
+  document.getElementById("slot"+idx).querySelector(".slot-label").style.display = "block";
   document.getElementById("slotRemove"+idx).style.display = "none";
-  const inputs = document.querySelectorAll(".upload-slot input");
-  if (inputs[idx]) inputs[idx].value = "";
-  const filled = selectedFiles.filter(Boolean).length;
-  document.getElementById("compareNote").style.display = filled > 1 ? "block" : "none";
 }
 
-// ── FRONTEND VALIDATION ───────────────────────────────────────────────────────
-function validateForm() {
-  const missing = [];
-  if (currentTab === "file") {
-    if (!selectedFiles.filter(Boolean).length) missing.push("Seleccione pelo menos um ficheiro");
-  } else if (currentTab === "text") {
-    if (!document.getElementById("rawData").value.trim()) missing.push("Cole os dados no campo de texto");
-  } else {
-    const period  = document.getElementById("f_periodCurrent");
-    const revenue = document.getElementById("f_revenueCurrent");
-    const teamData  = document.getElementById("f_teamData");
-    const costsData = document.getElementById("f_costsData");
-    if (!period || !period.value.trim()) missing.push("Período actual");
-    if (currentReportType === "sales"     && (!revenue   || !revenue.value.trim()))   missing.push("Receita actual");
-    if (currentReportType === "efficiency"&& (!teamData  || !teamData.value.trim()))   missing.push("Dados das equipas / colaboradores");
-    if (currentReportType === "cost"      && (!costsData || !costsData.value.trim()))  missing.push("Lista de custos por categoria");
-    if (currentReportType === "financial" && (!revenue   || !revenue.value.trim()))    missing.push("Receita do período");
-  }
-  if (missing.length) {
-    const list = document.getElementById("validationList");
-    list.innerHTML = missing.map(m => `<li>${m}</li>`).join("");
-    document.getElementById("validationMsg").classList.add("on");
-    return false;
-  }
-  hideValidation();
-  return true;
+// ── RESET ─────────────────────────────────────────────────────────────────────
+function resetAll() {
+  selectedFiles = [null, null, null];
+  [0,1,2].forEach(i => {
+    document.getElementById("slotFile"+i).style.display = "none";
+    document.getElementById("slot"+i).querySelector(".slot-label").style.display = "block";
+    document.getElementById("slotRemove"+i).style.display = "none";
+  });
+  document.getElementById("rawData").value = "";
+  document.querySelectorAll("#formFields input, #formFields textarea").forEach(el => el.value = "");
+  document.getElementById("report").classList.remove("on");
+  hideErr();
 }
 
-function hideValidation() { document.getElementById("validationMsg").classList.remove("on"); }
+// ── ANALYSE ───────────────────────────────────────────────────────────────────
+async function analyse() {
+  if (!currentToken) { openUpgrade("analisar"); return; }
+  if (analysesLeft <= 0 && currentPlan !== "team" && currentPlan !== "admin" && currentPlan !== "test") {
+    openUpgrade("análises adicionais");
+    return;
+  }
 
-// ── BUILD FORM DATA ───────────────────────────────────────────────────────────
-function buildFormData() {
+  hideErr();
+  const btn = document.getElementById("analyseBtn");
+  btn.disabled = true;
+  document.getElementById("loader").classList.add("on");
+  document.getElementById("report").classList.remove("on");
+
   const fd = new FormData();
   fd.append("company_name", document.getElementById("companyName").value);
   fd.append("currency", document.getElementById("currency").value);
@@ -797,524 +1101,535 @@ function buildFormData() {
   fd.append("report_type", currentReportType);
 
   if (currentTab === "file") {
-    selectedFiles.forEach((f, i) => { if (f) fd.append("file" + (i+1), f); });
+    const files = selectedFiles.filter(Boolean);
+    if (!files.length) { showErr("Por favor seleccione pelo menos um ficheiro."); btn.disabled=false; document.getElementById("loader").classList.remove("on"); return; }
+    files.forEach((f, i) => fd.append("file"+(i+1), f));
   } else if (currentTab === "text") {
-    fd.append("raw_data", document.getElementById("rawData").value.trim());
+    const d = document.getElementById("rawData").value.trim();
+    if (!d) { showErr("Por favor cole os dados."); btn.disabled=false; document.getElementById("loader").classList.remove("on"); return; }
+    fd.append("raw_data", d);
   } else {
-    if (currentReportType === "financial") {
-      const parts = [];
-      ["f_periodCurrent","f_periodPrevious","f_revenueCurrent","f_revenuePrevious",
-       "f_cogs","f_opex","f_netResult","f_cash","f_costsData","f_extraNotes"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.value.trim()) parts.push(id.replace("f_","") + ": " + el.value.trim());
-      });
-      fd.append("raw_data", parts.join("\n"));
-      fd.set("input_mode", "text");
-    } else if (currentReportType === "cost") {
-      const parts = [];
-      ["f_periodCurrent","f_periodPrevious","f_costsData","f_revenueCurrent","f_sector","f_extraNotes"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.value.trim()) parts.push(id.replace("f_","") + ": " + el.value.trim());
-      });
-      fd.append("raw_data", parts.join("\n"));
-      fd.set("input_mode", "text");
-    } else if (currentReportType === "efficiency") {
-      const parts = [];
-      ["f_periodCurrent","f_periodPrevious","f_teamData","f_outputMetric","f_totalLaborCost","f_extraNotes"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.value.trim()) parts.push(id.replace("f_","") + ": " + el.value.trim());
-      });
-      fd.append("raw_data", parts.join("\n"));
-      fd.set("input_mode", "text");
-    } else {
-      const fieldMap = {
-        f_periodCurrent:"period_current", f_periodPrevious:"period_previous",
-        f_revenueCurrent:"revenue_current", f_revenuePrevious:"revenue_previous",
-        f_unitsCurrent:"units_current", f_unitsPrevious:"units_previous",
-        f_topProducts:"top_products", f_topClients:"top_clients",
-        f_topSalespeople:"top_salespeople", f_extraNotes:"extra_notes"
-      };
-      Object.entries(fieldMap).forEach(([id, key]) => {
-        const el = document.getElementById(id);
-        if (el && el.value.trim()) fd.append(key, el.value.trim());
-      });
-    }
+    const fields = {
+      period_current: "f_periodCurrent", period_previous: "f_periodPrevious",
+      revenue_current: "f_revenueCurrent", revenue_previous: "f_revenuePrevious",
+      units_current: "f_unitsCurrent", units_previous: "f_unitsPrevious",
+      top_products: "f_topProducts", top_clients: "f_topClients",
+      top_salespeople: "f_topSalespeople", extra_notes: "f_extraNotes",
+      op_costs: "f_costData",
+    };
+    Object.entries(fields).forEach(([key, id]) => {
+      const el = document.getElementById(id);
+      if (el) fd.append(key, el.value);
+    });
   }
-  return fd;
-}
-
-// ── ANALYSE ───────────────────────────────────────────────────────────────────
-async function analyse() {
-  hideErr();
-  hideValidation();
-  if (!validateForm()) return;
-
-  const btn = document.getElementById("analyseBtn");
-  btn.disabled = true;
-  document.getElementById("loader").classList.add("on");
-  document.getElementById("report").classList.remove("on");
-  document.getElementById("dqBanner").classList.remove("on");
 
   try {
     const res = await fetch(`${BACKEND_URL}/analyze-sales`, {
       method: "POST",
-      headers: { "X-Access-Code": ACCESS_CODE },
-      body: buildFormData()
+      headers: { "X-Token": currentToken },
+      body: fd,
     });
-    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || "Erro ao gerar relatório."); }
+    if (!res.ok) {
+      const e = await res.json().catch(()=>({}));
+      if (res.status === 401) { logout(); return; }
+      if (res.status === 429) { openUpgrade(e.detail || "mais análises"); throw new Error(""); }
+      throw new Error(e.detail || "Erro ao gerar relatório.");
+    }
     const data = await res.json();
-    const rtype = data.report_type || currentReportType;
-    sessionReports[rtype] = data;
+    if (data.analyses_remaining !== undefined) {
+      analysesLeft = data.analyses_remaining;
+      updatePlanUI();
+    }
+    sessionReports[currentReportType] = data;
     currentReport = data;
-    updateSessionBar();
-    updateChatBadge();
-    showDQBanner(data);
     renderReport(data);
-  } catch (e) {
-    showErr(e.message);
+    updateChatPills();
+    if (hasChatbot) document.getElementById("chatBtn").classList.add("show");
+  } catch(e) {
+    if (e.message) showErr(e.message);
   } finally {
     btn.disabled = false;
     document.getElementById("loader").classList.remove("on");
   }
 }
 
-// ── DATA QUALITY BANNER ───────────────────────────────────────────────────────
-function showDQBanner(data) {
-  const dq = data.data_quality;
-  const missing = data.missing_data || [];
-  const banner = document.getElementById("dqBanner");
-  const msg = document.getElementById("dqMessage");
-  if (dq === "good" || !dq) { banner.classList.remove("on"); return; }
-  banner.classList.remove("dq-partial","dq-insufficient");
-  if (dq === "insufficient") {
-    banner.classList.add("on","dq-insufficient");
-    msg.innerHTML = `<strong>Dados insuficientes</strong> — o relatório é maioritariamente estimado.${missing.length ? " Em falta: " + missing.join(", ") + "." : ""} O assistente pode ajudar-te a completar.`;
-  } else {
-    banner.classList.add("on","dq-partial");
-    msg.innerHTML = `<strong>Dados parciais</strong> — análise possível mas limitada.${missing.length ? " Em falta: " + missing.join(", ") + "." : ""} Podes completar com o assistente.`;
-  }
-}
-
-// ── SESSION BAR ───────────────────────────────────────────────────────────────
-function updateSessionBar() {
-  Object.keys(sessionReports).forEach(type => {
-    const el = document.getElementById("sess-" + type);
-    if (el) el.classList.toggle("done", !!sessionReports[type]);
-  });
-}
-
-function viewSessionReport(type) {
-  if (!sessionReports[type]) return;
-  const btn = document.querySelector(`.rtype-btn:nth-child(${["sales","efficiency","cost","financial"].indexOf(type)+1})`);
-  if (btn) setReportType(type, btn);
-  currentReport = sessionReports[type];
-  renderReport(sessionReports[type]);
-  window.scrollTo({ top: document.getElementById("report").offsetTop - 20, behavior: "smooth" });
-}
-
-function updateChatBadge() {
-  const count = Object.values(sessionReports).filter(Boolean).length;
-  document.getElementById("chatBadge").textContent = count;
-  if (count > 0) document.getElementById("chatBtn").classList.add("show");
-}
-
-function resetCurrent() {
-  selectedFiles = [null, null, null];
-  [0,1,2].forEach(i => {
-    document.getElementById("slot"+i).classList.remove("filled");
-    document.getElementById("slotName"+i).textContent = "";
-    document.getElementById("slotRemove"+i).style.display = "none";
-  });
-  document.querySelectorAll(".upload-slot input").forEach(inp => inp.value = "");
-  document.getElementById("compareNote").style.display = "none";
-  document.getElementById("rawData").value = "";
-  document.getElementById("formContent").innerHTML = REPORT_META[currentReportType].formFields;
-  document.getElementById("report").classList.remove("on");
-  document.getElementById("dqBanner").classList.remove("on");
-  hideErr(); hideValidation();
-}
-
 // ── RENDER REPORT ─────────────────────────────────────────────────────────────
 function renderReport(d) {
-  const company = document.getElementById("companyName").value || "Empresa";
-  const type    = d.report_type || currentReportType;
-  const meta    = REPORT_META[type];
-  document.getElementById("rTypeTag").textContent  = meta.typeLabel;
-  document.getElementById("rPeriod").textContent   = d.period || "";
-  document.getElementById("rTitle").textContent    = company + " — " + meta.typeLabel;
-  document.getElementById("rSummary").textContent  = d.executive_summary || "";
+  const company = document.getElementById("companyName").value || "Relatório";
+  const typeLabel = REPORT_META[d.report_type || currentReportType]?.badge || "Relatório";
+
+  document.getElementById("rPeriod").textContent = d.period || "";
+  document.getElementById("rTitle").textContent = `${company} — ${typeLabel}`;
+  document.getElementById("rSummary").textContent = d.executive_summary || "";
+
+  // Data quality badge
+  const dq = d.data_quality;
+  const dqEl = document.getElementById("rDataQuality");
+  if (dq) {
+    const dqMap = { good: ["dq-good","Dados completos"], partial: ["dq-partial","Dados parciais"], insufficient: ["dq-insufficient","Dados insuficientes"] };
+    const [cls, label] = dqMap[dq] || ["dq-partial","Dados parciais"];
+    dqEl.innerHTML = `<span class="data-quality-badge ${cls}">${label}</span>`;
+    if (d.missing_data?.length) {
+      dqEl.innerHTML += `<span style="font-size:.72rem;color:var(--muted);margin-left:10px">Em falta: ${d.missing_data.join(", ")}</span>`;
+    }
+  } else { dqEl.innerHTML = ""; }
+
+  // KPIs
   document.getElementById("kpisGrid").innerHTML = (d.kpis || []).map(k => {
-    const cls   = k.trend === "up" ? "trend-up" : k.trend === "down" ? "trend-down" : "trend-neutral";
+    const cls = k.trend === "up" ? "trend-up" : k.trend === "down" ? "trend-down" : "trend-neutral";
     const arrow = k.trend === "up" ? "↑" : k.trend === "down" ? "↓" : "→";
     return `<div class="kpi-card"><div class="kpi-label">${k.label}</div><div class="kpi-value">${k.value}</div><div class="kpi-change ${cls}">${arrow} ${k.change}</div></div>`;
   }).join("");
-  const body = document.getElementById("reportBody");
-  body.innerHTML = "";
-  const alertsHtml = (d.alerts || []).map(a => {
+
+  // Alerts
+  document.getElementById("alertsList").innerHTML = (d.alerts || []).map(a => {
     const lvl = a.level === "critical" ? "crit" : a.level === "positive" ? "pos" : "warn";
     return `<div class="alert-item alert-${lvl}"><div class="alert-dot dot-${lvl}"></div>${a.message}</div>`;
-  }).join("") || '<div style="color:var(--muted);font-size:.82rem">Sem alertas identificados.</div>';
-  body.appendChild(makeSection("Alertas & Destaques", alertsHtml));
-  if (type === "sales")           renderSalesBody(d, body);
-  else if (type === "efficiency") renderEfficiencyBody(d, body);
-  else if (type === "cost")       renderCostBody(d, body);
-  else if (type === "financial")  renderFinancialBody(d, body);
+  }).join("") || '<div style="color:var(--muted);font-size:.83rem">Sem alertas identificados.</div>';
+
+  // Narrative / summary
+  const narr = d.comparison_narrative || d.summary_narrative || d.financial_narrative || d.cash_flow_summary || "";
+  document.getElementById("comparisonText").textContent = narr;
+  document.getElementById("comparisonCard").style.display = narr ? "block" : "none";
+  document.getElementById("narrativeLabel").textContent = d.comparison_narrative ? "Análise Comparativa" : "Sumário Operacional";
+
+  // Tops grid (sales + efficiency)
+  const tops = document.getElementById("topsGrid");
+  const sections = [];
+  if (d.top_products?.length) sections.push({ data: d.top_products, label: "Top Produtos / Serviços" });
+  if (d.top_clients?.length) sections.push({ data: d.top_clients, label: "Top Clientes" });
+  if (d.top_salespeople?.length) sections.push({ data: d.top_salespeople, label: "Top Vendedores" });
+  if (d.team_performance?.length) sections.push({ data: d.team_performance.map((t,i) => ({rank:i+1, name:t.unit, value:t.efficiency_ratio, note:t.note})), label: "Performance por Equipa" });
+  tops.innerHTML = sections.map(s =>
+    `<div class="card"><div class="card-body"><div class="section-title">${s.label}</div><table class="rank-table"><tbody>${
+      s.data.map(i => `<tr><td class="rank-num">#${i.rank}</td><td class="rank-name">${i.name}<span class="rank-note">${i.note||""}</span></td><td class="rank-val">${i.value}</td></tr>`).join("")
+    }</tbody></table></div></div>`
+  ).join("");
+
+  // Forecast
+  const f = d.forecast || {};
+  const fc = document.getElementById("forecastCard");
+  if (f.next_period || f.revenue_estimate) {
+    const confCls = f.confidence === "high" ? "conf-high" : f.confidence === "low" ? "conf-low" : "conf-medium";
+    const confLabel = f.confidence === "high" ? "Alta confiança" : f.confidence === "low" ? "Baixa confiança" : "Confiança média";
+    document.getElementById("forecastBox").innerHTML = `
+      <div class="forecast-top">
+        <div><div class="section-title" style="margin-bottom:4px">Próximo período</div><div class="forecast-period">${f.next_period||"—"}</div></div>
+        <div style="text-align:right"><div class="forecast-estimate">${f.revenue_estimate||f.ebitda_estimate||"—"}</div><span class="confidence-badge ${confCls}">${confLabel}</span></div>
+      </div>
+      <div class="forecast-rationale">${f.rationale||""}</div>
+      <div class="section-title">Acções recomendadas</div>
+      ${(f.actions||[]).map(a=>`<div class="forecast-action">${a}</div>`).join("")}`;
+    fc.style.display = "block";
+  } else { fc.style.display = "none"; }
+
+  // Extra sections for cost/efficiency/financial
+  const extra = document.getElementById("extraSections");
+  let extraHTML = "";
+  if (d.savings_opportunities?.length) {
+    extraHTML += `<div class="card" style="margin-bottom:18px"><div class="card-body"><div class="section-title">Oportunidades de Poupança</div>${
+      d.savings_opportunities.map(s => `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="font-size:.85rem;color:var(--white);margin-bottom:4px">${s.opportunity}</div><div style="font-size:.78rem;color:var(--gold);font-family:'DM Mono',monospace">${s.estimated_saving} · Esforço: ${s.effort} · ${s.timeframe}</div></div>`).join("")
+    }</div></div>`;
+  }
+  if (d.bottlenecks?.length) {
+    extraHTML += `<div class="card" style="margin-bottom:18px"><div class="card-body"><div class="section-title">Bottlenecks Identificados</div>${
+      d.bottlenecks.map(b => `<div style="padding:10px 0;border-bottom:1px solid rgba(255,255,255,.04)"><div style="font-size:.85rem;color:var(--white)">${b.area}: ${b.issue}</div><div style="font-size:.78rem;color:var(--warn);font-family:'DM Mono',monospace;margin-top:3px">Impacto: ${b.impact}</div><div style="font-size:.78rem;color:var(--muted2);margin-top:2px">→ ${b.recommendation}</div></div>`).join("")
+    }</div></div>`;
+  }
+  if (d.income_statement) {
+    const is = d.income_statement;
+    extraHTML += `<div class="card" style="margin-bottom:18px"><div class="card-body"><div class="section-title">Demonstração de Resultados</div><table style="width:100%;font-size:.85rem"><tbody>
+      ${Object.entries({Receita:is.revenue,"COGS":is.cogs,"Margem Bruta":is.gross_profit,"Margem %":is.gross_margin_pct,"Despesas Operacionais":is.operating_expenses,"EBITDA":is.ebitda,"Resultado Líquido":is.net_result}).map(([k,v])=>v?`<tr><td style="padding:7px 0;color:var(--muted2)">${k}</td><td style="text-align:right;font-family:'DM Mono',monospace;color:var(--white)">${v}</td></tr>`:``).join("")}
+    </tbody></table></div></div>`;
+  }
+  extra.innerHTML = extraHTML;
+
   document.getElementById("report").classList.add("on");
   document.getElementById("report").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function makeSection(title, html) {
-  const div = document.createElement("div");
-  div.className = "section-card";
-  div.innerHTML = `<div class="section-card-header">${title}</div><div class="section-card-body">${html}</div>`;
-  return div;
-}
+// ── EXPORT REPORT PDF ─────────────────────────────────────────────────────────
+function exportReportPDF() {
+  if (!currentReport) return;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+  const d = currentReport;
+  const company = document.getElementById("companyName").value || "Relatório";
+  const margin = 18, pageW = 210, usableW = pageW - margin * 2;
+  let y = margin;
 
-function renderSalesBody(d, body) {
-  if (d.comparison_narrative) body.appendChild(makeSection("Análise Comparativa", `<div class="comparison-text">${d.comparison_narrative}</div>`));
-  const tops = [{key:"top_products",label:"Top Produtos"},{key:"top_clients",label:"Top Clientes"},{key:"top_salespeople",label:"Top Vendedores"}];
-  const topsHtml = tops.filter(s => (d[s.key]||[]).length).map(s => {
-    const rows = (d[s.key]||[]).map(i => `<tr><td class="rank-num">#${i.rank}</td><td class="rank-name">${i.name}<span class="rank-note">${i.note||""}</span></td><td class="rank-val">${i.value}</td></tr>`).join("");
-    return `<div class="section-card"><div class="section-card-header">${s.label}</div><div class="section-card-body"><table class="rank-table"><tbody>${rows}</tbody></table></div></div>`;
-  }).join("");
-  if (topsHtml) { const g = document.createElement("div"); g.className = "tops-grid"; g.innerHTML = topsHtml; body.appendChild(g); }
-  const f = d.forecast||{};
+  const addText = (text, size, bold, color, maxW) => {
+    doc.setFontSize(size);
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...(color || [240,237,232]));
+    const lines = doc.splitTextToSize(String(text||""), maxW || usableW);
+    doc.text(lines, margin, y);
+    y += lines.length * (size * 0.44) + 2;
+  };
+  const checkPage = () => { if (y > 272) { doc.addPage(); y = margin; } };
+
+  doc.setFillColor(12,12,12);
+  doc.rect(0,0,210,297,"F");
+  doc.setDrawColor(201,168,76);
+  doc.setLineWidth(0.4);
+  doc.line(margin, 14, pageW-margin, 14);
+
+  y = 20;
+  addText("SalesLab · Powered by Claude AI", 7, false, [80,80,80]);
+  addText(d.period || "", 8, false, [201,168,76]);
+  y += 1;
+  addText(`${company} — ${REPORT_META[d.report_type||currentReportType]?.badge||"Relatório"}`, 17, true, [240,237,232]);
+  y += 1;
+  addText(d.executive_summary || "", 9, false, [130,130,130]);
+  y += 4;
+  doc.setDrawColor(60,60,60); doc.setLineWidth(0.2); doc.line(margin,y,pageW-margin,y); y += 5;
+
+  addText("INDICADORES CHAVE", 7, true, [140,106,47]);
+  (d.kpis||[]).forEach(k => { checkPage(); addText(`${k.label}: ${k.value}  (${k.change})`, 9, false, [190,190,190]); });
+  y += 3;
+
+  checkPage(); addText("ALERTAS & DESTAQUES", 7, true, [140,106,47]);
+  (d.alerts||[]).forEach(a => {
+    checkPage();
+    const c = a.level === "critical" ? [231,76,60] : a.level === "positive" ? [46,204,113] : [230,126,34];
+    addText(`• ${a.message}`, 9, false, c);
+  });
+  y += 3;
+
+  const narr = d.comparison_narrative || d.summary_narrative || d.financial_narrative || "";
+  if (narr) { checkPage(); addText("ANÁLISE", 7, true, [140,106,47]); addText(narr, 9, false, [150,150,150]); y += 3; }
+
+  [["top_products","TOP PRODUTOS"],["top_clients","TOP CLIENTES"],["top_salespeople","TOP VENDEDORES"]].forEach(([key, label]) => {
+    const items = d[key] || [];
+    if (!items.length) return;
+    checkPage(); addText(label, 7, true, [140,106,47]);
+    items.forEach(i => { checkPage(); addText(`#${i.rank}  ${i.name}  —  ${i.value}`, 9, false, [190,190,190]); });
+    y += 3;
+  });
+
+  const f = d.forecast || {};
   if (f.next_period) {
-    const cc = f.confidence==="high"?"conf-high":f.confidence==="low"?"conf-low":"conf-medium";
-    body.appendChild(makeSection("Previsão — Próximo Período",
-      `<div class="forecast-box"><div class="forecast-top"><div><div class="forecast-period">${f.next_period}</div></div>
-      <div style="text-align:right"><div class="forecast-estimate">${f.revenue_estimate||"—"}</div><span class="confidence-badge ${cc}">${f.confidence} confiança</span></div></div>
-      <div class="forecast-rationale">${f.rationale||""}</div>
-      <div class="forecast-actions">${(f.actions||[]).map(a=>`<div class="forecast-action">${a}</div>`).join("")}</div></div>`));
+    checkPage(); addText("PREVISÃO", 7, true, [140,106,47]);
+    addText(`${f.next_period}  |  ${f.revenue_estimate||""}  (${f.confidence||""})`, 10, true, [201,168,76]);
+    addText(f.rationale || "", 9, false, [150,150,150]);
+    (f.actions||[]).forEach(a => { checkPage(); addText(`→ ${a}`, 9, false, [190,190,190]); });
   }
+
+  doc.setFontSize(7); doc.setTextColor(50,50,50);
+  doc.text(`SalesLab · Gerado em ${new Date().toLocaleDateString("pt-PT")}`, margin, 290);
+  doc.save(`saleslab-${currentReportType}-${Date.now()}.pdf`);
 }
 
-function renderEfficiencyBody(d, body) {
-  if ((d.team_performance||[]).length) {
-    const rows = d.team_performance.map(t =>
-      `<tr><td class="highlight">${t.unit}</td><td>${t.output||"—"}</td><td>${t.cost||"—"}</td><td class="highlight">${t.efficiency_ratio||"—"}</td><td>${t.vs_average||"—"}</td><td><span class="rank-note">${t.note||""}</span></td></tr>`
-    ).join("");
-    body.appendChild(makeSection("Performance por Equipa / Colaborador",
-      `<table class="data-table"><thead><tr><th>Unidade</th><th>Output</th><th>Custo</th><th>Rácio</th><th>vs. Média</th><th>Nota</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  if ((d.bottlenecks||[]).length) {
-    const rows = d.bottlenecks.map(b =>
-      `<tr><td class="highlight">${b.area}</td><td class="bad">${b.issue}</td><td class="warn">${b.impact||"—"}</td><td>${b.recommendation||"—"}</td></tr>`
-    ).join("");
-    body.appendChild(makeSection("Bottlenecks Identificados",
-      `<table class="data-table"><thead><tr><th>Área</th><th>Problema</th><th>Impacto</th><th>Recomendação</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  if ((d.optimisation_actions||[]).length) {
-    const rows = d.optimisation_actions.map(a => {
-      const ec = a.priority==="high"?"effort-high":a.priority==="low"?"effort-low":"effort-medium";
-      return `<tr><td><span class="effort-pill ${ec}">${a.priority}</span></td><td class="highlight">${a.action}</td><td class="ok">${a.expected_gain||"—"}</td></tr>`;
-    }).join("");
-    body.appendChild(makeSection("Acções de Optimização",
-      `<table class="data-table"><thead><tr><th>Prioridade</th><th>Acção</th><th>Ganho Estimado</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  if (d.summary_narrative) body.appendChild(makeSection("Conclusão", `<div class="comparison-text">${d.summary_narrative}</div>`));
+// ── UPGRADE MODAL ─────────────────────────────────────────────────────────────
+function openUpgrade(feature) {
+  document.getElementById("upgradeDesc").textContent = `Para aceder a ${feature}, faça upgrade do seu plano.`;
+  document.getElementById("upgradeModal").classList.add("open");
 }
+function closeUpgrade() { document.getElementById("upgradeModal").classList.remove("open"); }
 
-function renderCostBody(d, body) {
-  if ((d.cost_breakdown||[]).length) {
-    const rows = d.cost_breakdown.map(c => {
-      const sc = c.status==="ok"?"status-ok":c.status==="critical"?"status-critical":"status-review";
-      return `<tr><td class="highlight">${c.category}</td><td>${c.amount}</td><td>${c.pct_of_total||"—"}</td><td>${c.vs_previous||"—"}</td><td><span class="status-pill ${sc}">${c.status}</span></td></tr>`;
-    }).join("");
-    body.appendChild(makeSection("Estrutura de Custos",
-      `<table class="data-table"><thead><tr><th>Categoria</th><th>Valor</th><th>% Total</th><th>vs. Anterior</th><th>Estado</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  if ((d.unnecessary_costs||[]).length) {
-    const rows = d.unnecessary_costs.map(c =>
-      `<tr><td class="highlight">${c.item}</td><td>${c.current_spend}</td><td>${c.benchmark||"—"}</td><td class="bad">${c.excess||"—"}</td><td>${c.action||"—"}</td></tr>`
-    ).join("");
-    body.appendChild(makeSection("Custos Desnecessários",
-      `<table class="data-table"><thead><tr><th>Item</th><th>Gasto Actual</th><th>Benchmark</th><th>Excesso</th><th>Acção</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  if ((d.savings_opportunities||[]).length) {
-    const rows = d.savings_opportunities.map(s => {
-      const ec = s.effort==="high"?"effort-high":s.effort==="low"?"effort-low":"effort-medium";
-      return `<tr><td class="highlight">${s.opportunity}</td><td class="ok">${s.estimated_saving}</td><td><span class="effort-pill ${ec}">${s.effort}</span></td><td>${s.timeframe||"—"}</td></tr>`;
-    }).join("");
-    body.appendChild(makeSection("Oportunidades de Poupança",
-      `<table class="data-table"><thead><tr><th>Oportunidade</th><th>Poupança Estimada</th><th>Esforço</th><th>Prazo</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  let summaryHtml = "";
-  if (d.total_recoverable) summaryHtml += `<div class="savings-total"><div><div class="savings-label">Total recuperável</div><div style="font-size:.76rem;color:var(--muted);margin-top:3px">Se todas as oportunidades forem implementadas</div></div><div class="savings-amount">${d.total_recoverable}</div></div>`;
-  if ((d.priority_actions||[]).length) summaryHtml += `<div style="margin-top:14px"><div class="form-section-title">Acções Prioritárias</div><div class="forecast-actions">${d.priority_actions.map(a=>`<div class="forecast-action">${a}</div>`).join("")}</div></div>`;
-  if (summaryHtml) body.appendChild(makeSection("Resumo de Poupanças", summaryHtml));
-}
-
-function renderFinancialBody(d, body) {
-  const is = d.income_statement||{};
-  if (Object.keys(is).length) {
-    body.appendChild(makeSection("Demonstração de Resultados",
-      `<div class="pnl-grid">
-        <div class="pnl-item"><div class="pnl-label">Receita</div><div class="pnl-value">${is.revenue||"—"}</div></div>
-        <div class="pnl-item"><div class="pnl-label">Custo dos Serviços</div><div class="pnl-value">${is.cogs||"—"}</div></div>
-        <div class="pnl-item"><div class="pnl-label">Lucro Bruto</div><div class="pnl-value">${is.gross_profit||"—"}</div><div class="pnl-margin">${is.gross_margin_pct||""}</div></div>
-        <div class="pnl-item"><div class="pnl-label">Despesas Operacionais</div><div class="pnl-value">${is.operating_expenses||"—"}</div></div>
-        <div class="pnl-item"><div class="pnl-label">EBITDA</div><div class="pnl-value">${is.ebitda||"—"}</div></div>
-        <div class="pnl-item"><div class="pnl-label">Resultado Líquido</div><div class="pnl-value">${is.net_result||"—"}</div></div>
-      </div>`));
-  }
-  if (d.cash_flow_summary) body.appendChild(makeSection("Fluxo de Caixa", `<div class="comparison-text">${d.cash_flow_summary}</div>`));
-  if ((d.cost_structure||[]).length) {
-    const rows = d.cost_structure.map(c => `<tr><td class="highlight">${c.category}</td><td>${c.amount}</td><td>${c.pct_of_revenue||"—"}</td></tr>`).join("");
-    body.appendChild(makeSection("Estrutura de Custos", `<table class="data-table"><thead><tr><th>Categoria</th><th>Valor</th><th>% Receita</th></tr></thead><tbody>${rows}</tbody></table>`));
-  }
-  const f = d.forecast||{};
-  if (f.next_period) {
-    const cc = f.confidence==="high"?"conf-high":f.confidence==="low"?"conf-low":"conf-medium";
-    body.appendChild(makeSection("Previsão Financeira",
-      `<div class="forecast-box"><div class="forecast-top">
-        <div><div class="forecast-period">${f.next_period}</div></div>
-        <div style="text-align:right"><div class="forecast-estimate">${f.revenue_estimate||"—"}</div>
-        ${f.ebitda_estimate?`<div style="font-family:'DM Mono',monospace;font-size:.68rem;color:var(--muted2)">EBITDA: ${f.ebitda_estimate}</div>`:""}
-        <span class="confidence-badge ${cc}">${f.confidence} confiança</span></div></div>
-        <div class="forecast-rationale">${f.rationale||""}</div>
-        <div class="forecast-actions">${(f.actions||[]).map(a=>`<div class="forecast-action">${a}</div>`).join("")}</div></div>`));
-  }
-  if (d.financial_narrative) body.appendChild(makeSection("Perspectiva Financeira", `<div class="comparison-text">${d.financial_narrative}</div>`));
-}
-
-// ── MARKDOWN RENDERER ─────────────────────────────────────────────────────────
-function renderMarkdown(text) {
-  if (!text) return '';
-  const lines = text.split('\n');
-  let html = '';
-  let inList = false;
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
-    // Escape HTML
-    line = line.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    // Bold
-    line = line.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-    // H2
-    if (line.startsWith('## ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h2>${line.slice(3).trim()}</h2>`; continue;
-    }
-    // H3
-    if (line.startsWith('### ')) {
-      if (inList) { html += '</ul>'; inList = false; }
-      html += `<h3>${line.slice(4).trim()}</h3>`; continue;
-    }
-    // Bullet
-    if (/^[-*] /.test(line)) {
-      if (!inList) { html += '<ul>'; inList = true; }
-      html += `<li>${line.slice(2).trim()}</li>`; continue;
-    }
-    // Empty line
-    if (line.trim() === '') {
-      if (inList) { html += '</ul>'; inList = false; }
-      continue;
-    }
-    // Paragraph
-    if (inList) { html += '</ul>'; inList = false; }
-    html += `<p>${line.trim()}</p>`;
-  }
-  if (inList) html += '</ul>';
-  return html;
+// ── LOGOUT ────────────────────────────────────────────────────────────────────
+function logout() {
+  localStorage.removeItem("sl_token");
+  currentToken = null; currentPlan = null;
+  document.getElementById("app").classList.remove("visible");
+  document.getElementById("authOverlay").classList.remove("hidden");
+  document.getElementById("freeEmail").value = "";
+  document.getElementById("tokenInput").value = "";
+  document.getElementById("freeErr").classList.remove("on");
+  document.getElementById("tokenErr").classList.remove("on");
 }
 
 // ── CHAT ──────────────────────────────────────────────────────────────────────
-function openChat() {
-  document.getElementById("chatOverlay").classList.add("open");
-  updateChatPills();
-  if (!chatInitialised) initChat();
-  document.getElementById("chatInput").focus();
-}
-
-function openChatForData() {
-  askingForData = true;
-  openChat();
-  if (chatInitialised) {
-    const missing = currentReport?.missing_data || [];
-    const intro = missing.length
-      ? `Para melhorar este relatório preciso de mais alguns dados. Vamos a isso — ${missing[0]}?`
-      : "Vamos completar os dados em falta. O que posso ajudar-te a fornecer?";
-    addBotMsg(intro);
-    chatMessages.push({ role: "assistant", content: intro });
-  }
-}
-
-function closeChat() { document.getElementById("chatOverlay").classList.remove("open"); }
-
 function updateChatPills() {
   const pills = document.getElementById("chatReportPills");
-  const generated = Object.entries(sessionReports).filter(([,v]) => v);
-  pills.innerHTML = generated.length
-    ? generated.map(([type]) => `<span class="report-pill">${REPORT_META[type].typeLabel}</span>`).join("")
-    : `<span style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)">Nenhum relatório gerado ainda</span>`;
-  const status = document.getElementById("chatStatus");
-  status.textContent = generated.length > 1
-    ? `${generated.length} relatórios em contexto — análise cruzada activa`
-    : generated.length === 1 ? "1 relatório em contexto" : "Sem relatórios";
+  pills.innerHTML = Object.entries(sessionReports)
+    .filter(([,v]) => v)
+    .map(([k]) => `<span class="report-pill active">${REPORT_META[k]?.badge||k}</span>`)
+    .join("");
 }
+
+function openChat() {
+  if (!hasChatbot) { openUpgrade("o chatbot"); return; }
+  document.getElementById("chatOverlay").classList.add("open");
+  if (!chatInitialised) { initChat(); chatInitialised = true; }
+}
+function closeChat() { document.getElementById("chatOverlay").classList.remove("open"); }
 
 function initChat() {
-  chatInitialised = true;
-  chatMessages = [];
-  const generated = Object.entries(sessionReports).filter(([,v]) => v);
-  const company = document.getElementById("companyName").value || "a empresa";
-  let intro;
-  if (generated.length === 0) {
-    intro = "Ainda não geraste nenhum relatório. Usa as ferramentas acima para analisar os dados da empresa e depois podemos conversar sobre os resultados.";
-  } else if (generated.length === 1) {
-    const [type, data] = generated[0];
-    const meta = REPORT_META[type];
-    intro = `Analisei o ${meta.typeLabel} da ${company}. ${data.executive_summary || ""} O que queres explorar?`;
-    const suggs = meta.suggestions || [];
-    document.getElementById("chatSuggestions").innerHTML = suggs.map(s => `<button class="sugg" onclick="useSugg('${s.replace(/'/g,"\\'")}') ">${s}</button>`).join("");
-  } else {
-    const types = generated.map(([t]) => REPORT_META[t].typeLabel).join(", ");
-    intro = `Tenho ${generated.length} relatórios da ${company} em contexto: ${types}. Posso cruzar a informação entre eles. Por onde queres começar?`;
-    const crossSuggs = ["Cruza vendas com custos", "Onde está a maior ineficiência?", "Qual é o impacto financeiro total?", "Que devo resolver primeiro?"];
-    document.getElementById("chatSuggestions").innerHTML = crossSuggs.map(s => `<button class="sugg" onclick="useSugg('${s}')">${s}</button>`).join("");
-  }
-  addBotMsg(intro);
-  chatMessages.push({ role: "assistant", content: intro });
+  const msgs = document.getElementById("chatMessages");
+  const hasReports = Object.values(sessionReports).some(Boolean);
+  const welcomeText = hasReports
+    ? "Olá! Já tenho acesso aos relatórios gerados. O que quer saber sobre o negócio?"
+    : "Olá! Para começar a análise, gere primeiro um relatório em qualquer módulo. Depois posso cruzar toda a informação.";
+  appendBotMessage(welcomeText);
+  showSuggestions(REPORT_META[currentReportType]?.suggestions || []);
+  updateChatPills();
 }
 
-function useSugg(text) {
+function appendBotMessage(text) {
+  const msgs = document.getElementById("chatMessages");
+  const div = document.createElement("div");
+  div.className = "msg msg-bot";
+  div.innerHTML = formatMarkdown(text);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  const badge = document.getElementById("chatBadge");
+  badge.textContent = parseInt(badge.textContent||0) + 1;
+}
+
+function formatMarkdown(text) {
+  return text
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, '<ul>$1</ul>')
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[h|u|l|p])(.+)$/gm, '<p>$1</p>');
+}
+
+function showSuggestions(suggestions) {
+  const el = document.getElementById("chatSuggestions");
+  el.innerHTML = suggestions.slice(0,4).map(s =>
+    `<button class="suggestion" onclick="useSuggestion('${s}')">${s}</button>`
+  ).join("");
+}
+
+function useSuggestion(text) {
   document.getElementById("chatInput").value = text;
-  document.getElementById("chatSuggestions").innerHTML = "";
   sendChat();
 }
-
-// ── addBotMsg: renders markdown for bot, plain text for user ──────────────────
-function addBotMsg(text) {
-  const div = document.createElement("div");
-  div.className = "cmsg bot";
-  div.innerHTML = renderMarkdown(text);
-  const msgs = document.getElementById("chatMessages");
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function addUserMsg(text) {
-  const div = document.createElement("div");
-  div.className = "cmsg user";
-  div.textContent = text;
-  const msgs = document.getElementById("chatMessages");
-  msgs.appendChild(div);
-  msgs.scrollTop = msgs.scrollHeight;
-}
-
-function showTyping() {
-  const div = document.createElement("div");
-  div.className = "cmsg typing"; div.id = "chatTyping";
-  div.innerHTML = `<div class="typing-dots"><span></span><span></span><span></span></div>`;
-  const msgs = document.getElementById("chatMessages");
-  msgs.appendChild(div); msgs.scrollTop = msgs.scrollHeight;
-}
-
-function hideTyping() { const t = document.getElementById("chatTyping"); if (t) t.remove(); }
 
 async function sendChat() {
   const input = document.getElementById("chatInput");
   const text = input.value.trim();
   if (!text) return;
-  addUserMsg(text);
-  chatMessages.push({ role: "user", content: text });
+
+  const msgs = document.getElementById("chatMessages");
+  const userDiv = document.createElement("div");
+  userDiv.className = "msg msg-user";
+  userDiv.textContent = text;
+  msgs.appendChild(userDiv);
+  msgs.scrollTop = msgs.scrollHeight;
   input.value = ""; input.style.height = "auto";
-  document.getElementById("chatSend").disabled = true;
   document.getElementById("chatSuggestions").innerHTML = "";
-  showTyping();
+
+  chatMessages.push({ role: "user", content: text });
+
+  const typing = document.createElement("div");
+  typing.className = "msg-typing";
+  typing.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  document.getElementById("chatSend").disabled = true;
+  document.getElementById("chatStatus").textContent = "A pensar...";
+
   try {
     const res = await fetch(`${BACKEND_URL}/chat`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-Access-Code": ACCESS_CODE },
+      headers: { "Content-Type": "application/json", "X-Token": currentToken },
       body: JSON.stringify({
         messages: chatMessages,
         all_reports: sessionReports,
         company_name: document.getElementById("companyName").value || "a empresa",
         currency: document.getElementById("currency").value,
-        asking_for_data: askingForData
-      })
+        asking_for_data: askingForData,
+      }),
     });
     const data = await res.json();
-    hideTyping();
-    addBotMsg(data.message || "Sem resposta.");
+    typing.remove();
+    if (data.has_enough_data) askingForData = false;
     chatMessages.push({ role: "assistant", content: data.message });
-    if (askingForData && data.has_enough_data) {
-      askingForData = false;
-      setTimeout(() => addBotMsg("Óptimo! Já tens os dados suficientes para gerar um relatório mais preciso. Fecha este chat e tenta novamente."), 400);
-    }
-  } catch (e) {
-    hideTyping();
-    addBotMsg("Ocorreu um erro. Tenta novamente.");
+    appendBotMessage(data.message);
+  } catch(e) {
+    typing.remove();
+    appendBotMessage("Erro ao contactar o assistente. Tente novamente.");
+  } finally {
+    document.getElementById("chatSend").disabled = false;
+    document.getElementById("chatStatus").textContent = "Pronto";
   }
-  document.getElementById("chatSend").disabled = false;
-  input.focus();
 }
 
-document.getElementById("chatInput").addEventListener("input", function() {
-  this.style.height = "auto";
-  this.style.height = Math.min(this.scrollHeight, 90) + "px";
-});
-
-// ── PDF EXPORT ────────────────────────────────────────────────────────────────
-function exportPDF() {
-  if (!currentReport) return;
+// ── EXPORT CHAT PDF ───────────────────────────────────────────────────────────
+function exportChatPDF() {
+  if (chatMessages.length === 0) return;
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const d = currentReport;
-  const company = document.getElementById("companyName").value || "Relatório";
-  const margin = 20; let y = margin;
-  const pageW = 210; const usableW = pageW - margin * 2;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+  const margin = 18, pageW = 210, usableW = pageW - margin * 2;
+  let y = margin;
 
-  function addText(text, size, bold, color, maxW) {
+  const addText = (text, size, bold, color, indent=0) => {
+    doc.setFontSize(size);
+    doc.setFont("helvetica", bold ? "bold" : "normal");
+    doc.setTextColor(...(color || [200,200,200]));
+    const lines = doc.splitTextToSize(String(text||""), usableW - indent);
+    doc.text(lines, margin + indent, y);
+    y += lines.length * (size * 0.44) + 2;
+    if (y > 272) { doc.addPage(); y = margin; doc.setFillColor(12,12,12); doc.rect(0,0,210,297,"F"); }
+  };
+
+  doc.setFillColor(12,12,12);
+  doc.rect(0,0,210,297,"F");
+  doc.setDrawColor(201,168,76);
+  doc.setLineWidth(0.4);
+  doc.line(margin, 14, pageW-margin, 14);
+
+  y = 20;
+  addText("SalesLab · Conversa com o Analista IA", 7, false, [80,80,80]);
+  addText(`${document.getElementById("companyName").value || "Empresa"} · ${new Date().toLocaleDateString("pt-PT")}`, 8, false, [201,168,76]);
+  y += 3;
+  doc.setDrawColor(40,40,40); doc.setLineWidth(0.2); doc.line(margin,y,pageW-margin,y); y += 5;
+
+  chatMessages.forEach(m => {
+    if (m.role === "user") {
+      addText("Você:", 8, true, [201,168,76]);
+      addText(m.content, 9, false, [220,220,220], 4);
+    } else {
+      addText("Analista:", 8, true, [100,200,130]);
+      // Strip markdown for PDF
+      const clean = m.content
+        .replace(/#{1,3} /g, "")
+        .replace(/\*\*(.+?)\*\*/g, "$1")
+        .replace(/^- /gm, "• ");
+      addText(clean, 9, false, [170,170,170], 4);
+    }
+    y += 3;
+  });
+
+  doc.setFontSize(7); doc.setTextColor(50,50,50);
+  doc.text(`SalesLab · Exportado em ${new Date().toLocaleDateString("pt-PT")}`, margin, 290);
+  doc.save(`saleslab-chat-${Date.now()}.pdf`);
+}
+
+// ── DOWNLOAD GUIDE ────────────────────────────────────────────────────────────
+function downloadGuide() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"mm", format:"a4" });
+  const margin = 18, pageW = 210, usableW = pageW - margin * 2;
+  let y = margin;
+
+  const newPage = () => {
+    doc.addPage();
+    doc.setFillColor(12,12,12);
+    doc.rect(0,0,210,297,"F");
+    doc.setDrawColor(40,40,40); doc.setLineWidth(0.2);
+    doc.line(margin, 14, pageW-margin, 14);
+    y = 22;
+  };
+  const check = (h=10) => { if (y + h > 272) newPage(); };
+  const addT = (text, size, bold, color, indent=0) => {
     doc.setFontSize(size); doc.setFont("helvetica", bold?"bold":"normal");
-    doc.setTextColor(...(color||[240,237,232]));
-    const lines = doc.splitTextToSize(String(text||""), maxW||usableW);
-    doc.text(lines, margin, y); y += lines.length*(size*0.45)+3;
-  }
-  function checkPage() { if (y>270) { doc.addPage(); doc.setFillColor(12,12,12); doc.rect(0,0,210,297,"F"); doc.setDrawColor(201,168,76); doc.setLineWidth(0.2); doc.line(margin,12,pageW-margin,12); y=margin; } }
+    doc.setTextColor(...(color||[200,200,200]));
+    const lines = doc.splitTextToSize(String(text||""), usableW - indent);
+    check(lines.length * (size * 0.44) + 3);
+    doc.text(lines, margin + indent, y);
+    y += lines.length * (size * 0.44) + 3;
+  };
+  const divLine = () => { check(4); doc.setDrawColor(40,40,40); doc.setLineWidth(0.2); doc.line(margin,y,pageW-margin,y); y += 5; };
 
   doc.setFillColor(12,12,12); doc.rect(0,0,210,297,"F");
-  doc.setDrawColor(201,168,76); doc.setLineWidth(0.5); doc.line(margin,15,pageW-margin,15);
+  doc.setDrawColor(201,168,76); doc.setLineWidth(0.5);
+  doc.line(margin, 14, pageW-margin, 14);
+
   y = 22;
-  const meta = REPORT_META[d.report_type||currentReportType];
-  addText("SalesLab · " + meta.typeLabel, 7, false, [100,100,100]);
-  addText(d.period||"", 8, false, [201,168,76]); y+=2;
-  addText(company + " — " + meta.typeLabel, 18, true, [240,237,232]); y+=2;
-  addText(d.executive_summary||"", 9, false, [140,140,140]); y+=4;
-  doc.setLineWidth(0.2); doc.line(margin,y,pageW-margin,y); y+=6;
-  addText("INDICADORES CHAVE", 7, true, [140,106,47]);
-  (d.kpis||[]).forEach(k => { checkPage(); addText(`${k.label}: ${k.value}  (${k.change})`, 9, false, [200,200,200]); });
-  y+=4; checkPage();
-  addText("ALERTAS & DESTAQUES", 7, true, [140,106,47]);
-  (d.alerts||[]).forEach(a => { checkPage(); const c=a.level==="critical"?[231,76,60]:a.level==="positive"?[46,204,113]:[230,126,34]; addText(`• ${a.message}`,9,false,c); });
-  y+=4;
-  if (d.report_type==="sales") {
-    if (d.comparison_narrative) { checkPage(); addText("ANÁLISE COMPARATIVA",7,true,[140,106,47]); addText(d.comparison_narrative,9,false,[160,160,160]); y+=4; }
-    ["top_products","top_clients","top_salespeople"].forEach(key => {
-      const labels={top_products:"TOP PRODUTOS",top_clients:"TOP CLIENTES",top_salespeople:"TOP VENDEDORES"};
-      if(!(d[key]||[]).length)return; checkPage(); addText(labels[key],7,true,[140,106,47]);
-      d[key].forEach(i=>{checkPage();addText(`#${i.rank}  ${i.name}  —  ${i.value}`,9,false,[200,200,200]);}); y+=4;
-    });
-    const f=d.forecast||{}; if(f.next_period){checkPage();addText("PREVISÃO",7,true,[140,106,47]);addText(`${f.next_period}  |  ${f.revenue_estimate}  (${f.confidence})`,11,true,[201,168,76]);addText(f.rationale||"",9,false,[160,160,160]);(f.actions||[]).forEach(a=>{checkPage();addText(`→ ${a}`,9,false,[200,200,200]);});}
-  } else if (d.report_type==="cost") {
-    if(d.total_recoverable){checkPage();addText("TOTAL RECUPERÁVEL",7,true,[140,106,47]);addText(d.total_recoverable,14,true,[201,168,76]);y+=4;}
-    (d.priority_actions||[]).forEach(a=>{checkPage();addText(`→ ${a}`,9,false,[200,200,200]);});
-  } else if (d.report_type==="financial") {
-    const is=d.income_statement||{}; if(Object.keys(is).length){checkPage();addText("DEMONSTRAÇÃO DE RESULTADOS",7,true,[140,106,47]);Object.entries(is).forEach(([k,v])=>{checkPage();addText(`${k.toUpperCase()}: ${v}`,9,false,[200,200,200]);});}
-  } else if (d.report_type==="efficiency") {
-    (d.optimisation_actions||[]).forEach(a=>{checkPage();addText(`[${a.priority}] ${a.action} — ${a.expected_gain||""}`,9,false,[200,200,200]);});
-  }
-  doc.setFontSize(7); doc.setTextColor(60,60,60);
-  doc.text(`SalesLab · Gerado em ${new Date().toLocaleDateString("pt-PT")}`, margin, 290);
-  doc.save(`saleslab-${d.report_type||"relatorio"}-${Date.now()}.pdf`);
+  addT("SALES LAB", 22, true, [201,168,76]);
+  addT("Guia de Documentos e Formatos Aceites", 11, false, [160,160,160]);
+  y += 4;
+  addT("O Sales Lab processa qualquer formato de dados que a sua empresa já produz.", 9, false, [130,130,130]);
+  addT("Não é necessário preparar ficheiros especiais — use o que já tem.", 9, false, [130,130,130]);
+  y += 3; divLine();
+
+  const sections = [
+    {
+      title: "📊 Módulo de Vendas",
+      color: [201,168,76],
+      items: [
+        "Relatórios exportados do CRM: Salesforce, HubSpot, Pipedrive, ou qualquer outro",
+        "Ficheiros Excel ou CSV com dados de facturação, transacções ou vendas",
+        "PDFs de relatórios mensais de vendas ou resumos de gestão",
+        "Texto livre com os valores: 'Março 2026: €142.000, 87 clientes'",
+        "Extractos de sistemas de ponto de venda (POS)",
+      ],
+      essential: ["Período de referência (mês, trimestre ou ano)", "Receita ou volume de vendas", "Comparativo com período anterior (se disponível)"],
+      tip: "Dados parciais são processados. Quanto mais detalhe, mais rica a análise."
+    },
+    {
+      title: "📈 Módulo Financeiro (P&L)",
+      color: [100,200,150],
+      items: [
+        "Demonstração de resultados em qualquer formato (Excel, PDF, Word)",
+        "Exports de software contabilístico: Primavera, SAP, Sage, PHC, QuickBooks",
+        "Balancetes ou relatórios de gestão",
+        "Textos com os valores principais: receita, custos, resultado",
+        "Relatórios do contabilista em formato livre",
+      ],
+      essential: ["Receita total do período", "Custos ou despesas operacionais", "Resultado líquido ou EBITDA"],
+      tip: "Não é necessário enviar o documento contabilístico oficial. Um resumo chega."
+    },
+    {
+      title: "✂️ Módulo de Custos",
+      color: [231,76,60],
+      items: [
+        "Extractos bancários com categorização de despesas",
+        "Listas de facturas por fornecedor e categoria",
+        "Tabelas de custos fixos e variáveis do Excel",
+        "Exports de plataformas de gestão de despesas",
+        "Texto descritivo com os valores por categoria",
+      ],
+      essential: ["Categorias de custos com valores", "Período de referência", "Comparativo com período anterior (recomendado)"],
+      tip: "Separe custos por categoria (pessoal, renda, energia, etc.) para análises mais ricas."
+    },
+    {
+      title: "⚡ Módulo de Eficiência",
+      color: [52,152,219],
+      items: [
+        "Folhas de horas por colaborador ou equipa (Excel, CSV)",
+        "Relatórios de produtividade ou output por período",
+        "Exports de sistemas ERP ou de gestão de projecto",
+        "Dados de turnos e ocupação em formato livre",
+        "Tabelas com nome, horas e output por pessoa",
+      ],
+      essential: ["Nomes das equipas ou colaboradores", "Horas trabalhadas ou custo de pessoal", "Métrica de output (unidades, sessões, peças)"],
+      tip: "Anonimize os nomes se preferir — use Colaborador A, B, C."
+    }
+  ];
+
+  sections.forEach((s, si) => {
+    if (si > 0) { y += 3; divLine(); }
+    addT(s.title, 13, true, s.color);
+    y += 1;
+    addT("Documentos aceites:", 8, true, [150,150,150]);
+    s.items.forEach(item => addT(`• ${item}`, 9, false, [180,180,180], 4));
+    y += 2;
+    addT("Campos essenciais:", 8, true, [150,150,150]);
+    s.essential.forEach(e => addT(`✓ ${e}`, 9, false, [100,200,130], 4));
+    y += 2;
+    addT(`💡 ${s.tip}`, 8, false, [140,120,60]);
+  });
+
+  y += 4; divLine();
+  addT("REGRA DE OURO", 10, true, [201,168,76]);
+  addT("Dados parciais são sempre processados. O sistema indica o que está em falta", 9, false, [150,150,150]);
+  addT("e analisa o que está disponível. Nunca rejeita uma submissão por formato.", 9, false, [150,150,150]);
+  y += 3;
+  addT("Formatos de ficheiro aceites: .xlsx · .xls · .csv · .txt · .pdf", 8, false, [100,100,100]);
+
+  doc.setFontSize(7); doc.setTextColor(50,50,50);
+  doc.text(`SalesLab · Guia de Documentos · ${new Date().toLocaleDateString("pt-PT")}`, margin, 290);
+  doc.save("saleslab-guia-documentos.pdf");
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
+// ── HELPERS ───────────────────────────────────────────────────────────────────
 function showErr(msg) { const e=document.getElementById("errMsg"); e.textContent=msg; e.classList.add("on"); }
 function hideErr() { document.getElementById("errMsg").classList.remove("on"); }
 
-// Init default form
-document.getElementById("formContent").innerHTML = REPORT_META["sales"].formFields;
+// ── INIT ──────────────────────────────────────────────────────────────────────
+window.addEventListener("load", () => {
+  checkExistingToken();
+  document.getElementById("freeEmail").addEventListener("keydown", e => { if(e.key==="Enter") startFree(); });
+  document.getElementById("tokenInput").addEventListener("keydown", e => { if(e.key==="Enter") loginWithToken(); });
+});
 </script>
 </body>
 </html>
