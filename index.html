@@ -1657,13 +1657,15 @@ function hideErr() { document.getElementById("errMsg").classList.remove("on"); }
 
 
 async function checkout(priceId) {
-  const email = document.getElementById("freeEmail").value.trim() || "";
+  const emailField = document.getElementById("freeEmail");
+  const email = (emailField ? emailField.value.trim() : "") || "";
   try {
     const res = await fetch(`${BACKEND_URL}/create-checkout-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ price_id: priceId, email }),
     });
+    if (!res.ok) { alert("Erro ao iniciar pagamento. Tente novamente."); return; }
     const data = await res.json();
     if (data.url) window.location.href = data.url;
     else alert("Erro ao iniciar pagamento. Tente novamente.");
