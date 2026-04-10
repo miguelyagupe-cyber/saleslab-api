@@ -591,3 +591,127 @@ Responde sempre no idioma em que o utilizador escreve."""
         reply = reply.replace("DADOS_SUFICIENTES", "").strip()
 
     return JSONResponse({"message": reply, "has_enough_data": has_enough_data})
+
+# ── STRIPE + RESEND ───────────────────────────────────────────────────────────
+
+import stripe as stripe_lib
+import resend as resend_lib
+
+STRIPE_SECRET_KEY     = os.environ.get("STRIPE_SECRET_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+RESEND_API_KEY        = os.environ.get("RESEND_API_KEY", "")
+FRONTEND_URL          = os.environ.get("FRONTEND_URL", "https://sales-lab-lovat.vercel.app")
+
+stripe_lib.api_key = STRIPE_SECRET_KEY
+resend_lib.api_key = RESEND_API_KEY
+
+PRICE_TO_PLAN = {
+    "price_1TKVh6F38ciAxkPHSwZY0xDG": "team",
+    "price_1TKVgYF38ciAxkPHKyU1Otxh": "pro",
+    "price_1TKVfuF38ciAxkPHmKzccL0h": "starter",
+}
+
+PLAN_LABELS = {
+    "starter": "Starter",
+    "pro":     "Pro",
+    "team":    "Team",
+}
+
+
+def send_access_email(email: str, plan: str, token: str):
+    """Send access token to customer via Resend."""
+    label = PLAN_LABELS.get(plan, plan.capitalize())
+    html = f"""
+    <div style="background:#080808;padding:48px 32px;font-family:Georgia,serif;max-width:520px;margin:0 auto">
+      <div style="margin-bottom:32px">
+        <span style="color:#f0ede8;font-size:24px;font-weight:700">Sales</span>
+        <span style="color:#c9a84c;font-size:24px;font-weight:700">Lab</span>
+      </div>
+      <h1 style="color:#f0ede8;font-size:28px;font-weight:300;margin-bottom:8px">
+        Bem-vindo ao plano {label}.
+      </h1>
+      <p style="color:#888;font-size:15px;line-height:1.7;margin-bottom:32px">
+        O teu acesso está pronto. Copia o código abaixo e usa-o para entrar na plataforma.
+      </p>
+      <div style="background:#161616;border:1px solid rgba(201,168,76,0.25);border-radius:8px;padding:20px;margin-bottom:32px">
+        <p style="color:#888;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px">
+          Código de acesso
+        </p>
+        <p style="color:#c9a84c;font-size:13px;font-family:monospace;word-break:break-all;margin:0">
+          {token}
+        </p>
+      </div>
+      <a href="{FRONTEND_URL}" style="display:inline-block;background:#c9a84c;color:#000;padding:14px 28px;border-radius:6px;text-decoration:none;font-size:14px;font-weight:700;margin-bottom:32px">
+        Entrar na plataforma →
+      </a>
+      <p style="color:#444;font-size:12px;line-height:1.6">
+        Guarda este email — o código é necessário sempre que queiras aceder.<br>
+        Dúvidas? Responde a este email ou contacta geralsaleslab@gmail.com
+      </p>
+    </div>
+    """
+    resend_lib.Emails.send({
+        "from":    "SalesLab <onboarding@resend.dev>",
+        "to":      [email],
+        "subject": f"O teu acesso SalesLab {label} está pronto",
+        "html":    html,
+    })
+
+
+@app.post("/create-checkout-session")
+@limiter.limit("10/hour")
+async def create_checkout_session(request: Request):
+    body = await request.json()
+    price_id = body.get("price_id", "")
+    email    = body.get("email", "")
+
+    if price_id not in PRICE_TO_PLAN:
+        raise HTTPException(status_code=400, detail="Plano inválido.")
+
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe não configurado.")
+
+    try:
+        session = stripe_lib.checkout.Session.create(
+            mode="subscription",
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            customer_email=email if email else None,
+            success_url=f"{FRONTEND_URL}?payment=success&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{FRONTEND_URL}?payment=cancelled",
+            metadata={"price_id": price_id},
+        )
+        return JSONResponse({"url": session.url})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao criar sessão: {str(e)}")
+
+
+@app.post("/stripe-webhook")
+async def stripe_webhook(request: Request):
+    payload    = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    if not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="Webhook secret não configurado.")
+
+    try:
+        event = stripe_lib.Webhook.construct_event(
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
+        )
+    except stripe_lib.errors.SignatureVerificationError:
+        raise HTTPException(status_code=400, detail="Assinatura inválida.")
+
+    if event["type"] == "checkout.session.completed":
+        session  = event["data"]["object"]
+        email    = session.get("customer_email") or session.get("customer_details", {}).get("email", "")
+        price_id = session.get("metadata", {}).get("price_id", "")
+        plan     = PRICE_TO_PLAN.get(price_id)
+
+        if email and plan:
+            token = issue_token(plan, email)
+            try:
+                send_access_email(email, plan, token)
+            except Exception as e:
+                print(f"Erro ao enviar email: {e}")
+
+    return JSONResponse({"status": "ok"})

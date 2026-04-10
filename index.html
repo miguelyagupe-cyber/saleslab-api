@@ -428,7 +428,11 @@
         <div class="plan-mini-price" style="color:var(--gold)">€199<span style="font-size:.7rem;color:var(--muted2)">/mês</span></div>
       </div>
     </div>
-    <p class="upgrade-note">Contacte geralsaleslab@gmail.com para activar o seu plano.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+      <button onclick="checkout('price_1TKVfuF38ciAxkPHmKzccL0h')" style="background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.25);border-radius:6px;padding:10px;font-family:'DM Mono',monospace;font-size:.7rem;cursor:pointer;width:100%">Subscrever Starter €59/mês →</button>
+      <button onclick="checkout('price_1TKVgYF38ciAxkPHKyU1Otxh')" style="background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.25);border-radius:6px;padding:10px;font-family:'DM Mono',monospace;font-size:.7rem;cursor:pointer;width:100%">Subscrever Pro €109/mês →</button>
+      <button onclick="checkout('price_1TKVh6F38ciAxkPHSwZY0xDG')" style="background:var(--gold);color:#000;border:none;border-radius:6px;padding:10px;font-family:'DM Mono',monospace;font-size:.7rem;cursor:pointer;font-weight:500;width:100%">Subscrever Team €199/mês →</button>
+    </div>
   </div>
 </div>
 
@@ -1623,6 +1627,40 @@ function downloadGuide() {
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function showErr(msg) { const e=document.getElementById("errMsg"); e.textContent=msg; e.classList.add("on"); }
 function hideErr() { document.getElementById("errMsg").classList.remove("on"); }
+
+
+async function checkout(priceId) {
+  const email = document.getElementById("freeEmail").value.trim() || "";
+  try {
+    const res = await fetch(`${BACKEND_URL}/create-checkout-session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ price_id: priceId, email }),
+    });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert("Erro ao iniciar pagamento. Tente novamente.");
+  } catch(e) {
+    alert("Erro ao iniciar pagamento. Tente novamente.");
+  }
+}
+
+function checkPaymentReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("payment") === "success") {
+    document.getElementById("authOverlay").classList.remove("hidden");
+    document.getElementById("app").classList.add("visible");
+    // Show success message in token tab
+    switchAuthTab("token");
+    const err = document.getElementById("tokenErr");
+    err.style.color = "#2ecc71";
+    err.textContent = "Pagamento confirmado. Verifica o teu email para o código de acesso.";
+    err.classList.add("on");
+    window.history.replaceState({}, "", window.location.pathname);
+  } else if (params.get("payment") === "cancelled") {
+    window.history.replaceState({}, "", window.location.pathname);
+  }
+}
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 window.addEventListener("load", () => {
