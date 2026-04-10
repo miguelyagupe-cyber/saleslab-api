@@ -15,7 +15,8 @@ import jwt as pyjwt
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 JWT_SECRET        = os.environ.get("JWT_SECRET", "change-me-in-production")
 ADMIN_SECRET      = os.environ.get("ADMIN_SECRET", "admin-secret-change-me")
-ALLOWED_ORIGIN    = os.environ.get("ALLOWED_ORIGIN", "https://saleslab.vercel.app")
+ALLOWED_ORIGIN    = os.environ.get("ALLOWED_ORIGIN", "https://sales-lab-lovat.vercel.app")
+ALLOWED_ORIGINS   = [o.strip() for o in ALLOWED_ORIGIN.split(",") if o.strip()]
 
 if not ANTHROPIC_API_KEY:
     raise RuntimeError("ANTHROPIC_API_KEY not set")
@@ -43,7 +44,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["POST", "GET"],
     allow_headers=["*"],
@@ -598,7 +599,7 @@ import stripe as stripe_lib
 import resend as resend_lib
 
 STRIPE_SECRET_KEY     = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_WH_KEY = os.environ.get("STRIPE_WH_KEY", "")
+STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 RESEND_API_KEY        = os.environ.get("RESEND_API_KEY", "")
 FRONTEND_URL          = os.environ.get("FRONTEND_URL", "https://sales-lab-lovat.vercel.app")
 
@@ -691,12 +692,12 @@ async def stripe_webhook(request: Request):
     payload    = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
-    if not STRIPE_WH_KEY:
+    if not STRIPE_WEBHOOK_SECRET:
         raise HTTPException(status_code=500, detail="Webhook secret não configurado.")
 
     try:
         event = stripe_lib.Webhook.construct_event(
-            payload, sig_header, STRIPE_WH_KEY
+            payload, sig_header, STRIPE_WEBHOOK_SECRET
         )
     except stripe_lib.errors.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Assinatura inválida.")
