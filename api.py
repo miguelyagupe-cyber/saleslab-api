@@ -607,9 +607,9 @@ stripe_lib.api_key = STRIPE_SECRET_KEY
 resend_lib.api_key = RESEND_API_KEY
 
 PRICE_TO_PLAN = {
-    "price_1TKVh6F38ciAxkPHSwZY0xDG": "team",
-    "price_1TKVgYF38ciAxkPHKyU1Otxh": "pro",
-    "price_1TKVfuF38ciAxkPHmKzccL0h": "starter",
+    "price_1TKmgsF6K4YHMTtaxgCA7l9o": "team",
+    "price_1TKmgcF6K4YHMTta3AKnAx7S": "pro",
+    "price_1TKmgqF6K4YHMTtazLgx1vfD": "starter",
 }
 
 PLAN_LABELS = {
@@ -652,7 +652,7 @@ def send_access_email(email: str, plan: str, token: str):
     </div>
     """
     resend_lib.Emails.send({
-        "from":    "SalesLab <onboarding@resend.dev>",
+        "from":    "SalesLab <noreply@saleslab.cc>",
         "to":      [email],
         "subject": f"O teu acesso SalesLab {label} está pronto",
         "html":    html,
