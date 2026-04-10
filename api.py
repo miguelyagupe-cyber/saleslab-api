@@ -598,7 +598,7 @@ import stripe as stripe_lib
 import resend as resend_lib
 
 STRIPE_SECRET_KEY     = os.environ.get("STRIPE_SECRET_KEY", "")
-STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
+STRIPE_WH_KEY = os.environ.get("STRIPE_WH_KEY", "")
 RESEND_API_KEY        = os.environ.get("RESEND_API_KEY", "")
 FRONTEND_URL          = os.environ.get("FRONTEND_URL", "https://sales-lab-lovat.vercel.app")
 
@@ -691,12 +691,12 @@ async def stripe_webhook(request: Request):
     payload    = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
-    if not STRIPE_WEBHOOK_SECRET:
+    if not STRIPE_WH_KEY:
         raise HTTPException(status_code=500, detail="Webhook secret não configurado.")
 
     try:
         event = stripe_lib.Webhook.construct_event(
-            payload, sig_header, STRIPE_WEBHOOK_SECRET
+            payload, sig_header, STRIPE_WH_KEY
         )
     except stripe_lib.errors.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Assinatura inválida.")
