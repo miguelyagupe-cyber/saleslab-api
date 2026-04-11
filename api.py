@@ -362,6 +362,13 @@ async def generate_token(
     token = issue_token(plan, email or f"{plan}@saleslab.test", test_days=test_days)
     payload = decode_token(token)
     exp_dt = datetime.fromtimestamp(payload["exp"]).strftime("%d/%m/%Y")
+
+    if email and "@" in email and RESEND_API_KEY:
+        try:
+            send_access_email(email, plan, token)
+        except Exception as e:
+            print(f"Erro ao enviar email admin: {e}")
+
     return JSONResponse({
         "token":   token,
         "plan":    plan,
@@ -369,6 +376,7 @@ async def generate_token(
         "expires": exp_dt,
         "modules": payload["modules"],
         "chatbot": payload["chatbot"],
+        "email_sent": bool(email and "@" in email and RESEND_API_KEY),
     })
 
 # ── ADMIN: LIST LEADS ─────────────────────────────────────────────────────────
