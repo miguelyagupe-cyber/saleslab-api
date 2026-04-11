@@ -15,7 +15,7 @@ import jwt as pyjwt
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 JWT_SECRET        = os.environ.get("JWT_SECRET", "change-me-in-production")
 ADMIN_SECRET      = os.environ.get("ADMIN_SECRET", "admin-secret-change-me")
-ALLOWED_ORIGIN    = os.environ.get("ALLOWED_ORIGIN", "https://sales-lab-lovat.vercel.app")
+ALLOWED_ORIGIN    = os.environ.get("ALLOWED_ORIGIN", "https://app.saleslab.cc,https://www.saleslab.cc,https://saleslab.cc,https://sales-lab-lovat.vercel.app,https://saleslab-website.vercel.app")
 ALLOWED_ORIGINS   = [o.strip() for o in ALLOWED_ORIGIN.split(",") if o.strip()]
 
 if not ANTHROPIC_API_KEY:
@@ -601,7 +601,7 @@ import resend as resend_lib
 STRIPE_SECRET_KEY     = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 RESEND_API_KEY        = os.environ.get("RESEND_API_KEY", "")
-FRONTEND_URL          = os.environ.get("FRONTEND_URL", "https://sales-lab-lovat.vercel.app")
+FRONTEND_URL          = os.environ.get("FRONTEND_URL", "https://app.saleslab.cc")
 
 stripe_lib.api_key = STRIPE_SECRET_KEY
 resend_lib.api_key = RESEND_API_KEY
