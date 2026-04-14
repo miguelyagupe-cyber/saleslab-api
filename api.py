@@ -655,7 +655,7 @@ def send_access_email(email: str, plan: str, token: str):
       </a>
       <p style="color:#444;font-size:12px;line-height:1.6">
         Guarda este email — o código é necessário sempre que queiras aceder.<br>
-        Dúvidas? Responde a este email ou contacta geralsaleslab@gmail.com
+        Dúvidas? Responde a este email ou contacta geral@saleslab.cc
       </p>
     </div>
     """
